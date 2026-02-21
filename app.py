@@ -129,6 +129,16 @@ st.markdown(
     .stat-label {font-size: 0.84rem; color: #dbe5ff;}
     .stat-value {font-weight: 700; color: #f8fbff;}
     .tip {font-size: 0.88rem; color: #dbe5ff; margin-top: 0.45rem;}
+    .disclaimer {
+        margin-top: 0.7rem;
+        border-radius: 12px;
+        padding: 0.75rem 0.8rem;
+        background: rgba(30, 41, 59, 0.55);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        color: #dbe5ff;
+        font-size: 0.9rem;
+        line-height: 1.4;
+    }
     .stButton > button {
         border-radius: 14px;
         height: 3rem;
@@ -200,9 +210,10 @@ if generate:
                 render_balls(nums, "main-ball")
                 render_balls(stars, "star-ball")
 
-            st.info("For entertainment only — lottery outcomes are random and not predictable.")
             st.markdown(
-                '<p class="tip">Tip: if you want surprise-heavy picks, try Pure random mode.</p>',
+                '<div class="disclaimer"><strong>For entertainment only.</strong> '
+                'Lottery outcomes are random and not predictable.<br/>'
+                'Tip: if you want surprise-heavy picks, try Pure random mode.</div>',
                 unsafe_allow_html=True,
             )
-        
+
