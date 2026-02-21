@@ -59,39 +59,125 @@ def render_balls(values, class_name):
 st.markdown(
     """
 <style>
-.ball-row {display:flex; gap:0.5rem; margin:0.35rem 0 0.8rem 0; flex-wrap:wrap;}
-.main-ball, .star-ball {
-    width:2.25rem; height:2.25rem; border-radius:999px;
-    display:flex; align-items:center; justify-content:center;
-    font-weight:700; color:#fff;
-    box-shadow:0 1px 5px rgba(0,0,0,0.25);
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+
+html, body, [class*="css"]  {font-family: 'Inter', sans-serif;}
+
+.stApp {
+    background:
+      radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.18), transparent 30%),
+      radial-gradient(circle at 85% 25%, rgba(59, 130, 246, 0.12), transparent 30%),
+      linear-gradient(180deg, #0f172a 0%, #111827 100%);
+    color: #e2e8f0;
 }
-.main-ball {background: linear-gradient(180deg,#3b82f6,#1d4ed8);}
-.star-ball {background: linear-gradient(180deg,#f59e0b,#d97706);}
-.tip {font-size:0.9rem; opacity:0.9;}
+
+.block-container {
+    max-width: 460px;
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.65));
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 1rem;
+    padding: 0.9rem;
+}
+
+.hero {margin-bottom: 1rem;}
+.hero h1 {font-size: 1.75rem; margin-bottom: 0.3rem; color: #f8fafc;}
+.hero p {color: #dbe7ff; margin: 0; font-size: 0.96rem;}
+
+h2, h3, [data-testid="stWidgetLabel"] p {
+    color: #eaf2ff !important;
+}
+
+[data-testid="stCaptionContainer"] p,
+.stRadio label p,
+.stSlider label p,
+.stSlider [data-testid="stTickBarMin"],
+.stSlider [data-testid="stTickBarMax"],
+.stSlider [data-testid="stSliderTickBarMin"],
+.stSlider [data-testid="stSliderTickBarMax"] {
+    color: #b9cae8 !important;
+    opacity: 1 !important;
+}
+
+.stRadio [role="radiogroup"] label {
+    color: #d7e4fb !important;
+}
+
+[data-testid="stMetric"] {
+    border-radius: 0.85rem;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.7);
+    padding: 0.55rem;
+}
+
+.line-title {
+    font-weight: 700;
+    margin-top: 0.65rem;
+    margin-bottom: 0.25rem;
+    color: #f8fafc;
+}
+
+.ball-row {display:flex; gap:0.5rem; margin:0.2rem 0 0.7rem 0; flex-wrap:wrap;}
+.main-ball, .star-ball {
+    width:2.35rem;
+    height:2.35rem;
+    border-radius:999px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:800;
+    font-size: 0.95rem;
+    color:#fff;
+    box-shadow:0 8px 16px rgba(2,6,23,0.35);
+}
+.main-ball {
+    background: linear-gradient(180deg,#60a5fa,#1d4ed8);
+    border: 1px solid rgba(255,255,255,0.26);
+}
+.star-ball {
+    background: linear-gradient(180deg,#fbbf24,#d97706);
+    border: 1px solid rgba(255,255,255,0.24);
+}
+
+.disclaimer {
+    border-radius: 0.8rem;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    background: rgba(15, 23, 42, 0.7);
+    padding: 0.8rem;
+    font-size: 0.9rem;
+}
 </style>
 """,
     unsafe_allow_html=True,
 )
 
-st.title("🎰 EuroMillions Number Generator")
-st.write("Generate weighted picks from historical draws (just for fun).")
+st.markdown(
+    """
+<div class="hero">
+  <h1>🎰 EuroMillions Generator</h1>
+  <p>Smart, clean number picks inspired by historical draws.</p>
+</div>
+""",
+    unsafe_allow_html=True,
+)
 
-left, right = st.columns([1, 1])
-
-with left:
-    st.subheader("Options")
-    pick_mode = st.radio("Pick mode", ["Weighted by history", "Pure random"], index=0)
+with st.container(border=True):
+    st.subheader("Create your play lines")
+    pick_mode = st.radio("Pick mode", ["Weighted by history", "Pure random"], index=0, horizontal=True)
     line_count = st.slider("Number of lines", min_value=1, max_value=10, value=3)
     max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=200, step=50)
-    generate = st.button("Generate Numbers 🎯", use_container_width=True)
+    generate = st.button("Generate Numbers 🎯", use_container_width=True, type="primary")
 
-with right:
-    st.subheader("How this works")
+with st.container(border=True):
+    st.caption("How it works")
     st.markdown(
         "- **Weighted mode**: numbers that appeared more often get higher chance.\n"
         "- **Pure random mode**: all seen numbers are equally likely.\n"
-        "- Every line always contains **5 numbers + 2 stars**."
+        "- Every line contains **5 numbers + 2 stars**."
     )
 
 if generate:
@@ -119,15 +205,19 @@ if generate:
             st.subheader("Your Lines")
 
             # First line from preview so we can reuse computed counters for metrics.
-            st.markdown("**Line 1**")
+            st.markdown('<p class="line-title">Line 1</p>', unsafe_allow_html=True)
             render_balls(preview_nums, "main-ball")
             render_balls(preview_stars, "star-ball")
 
             for idx in range(2, line_count + 1):
                 nums, stars, _, _ = generate_line(draws, weighted=weighted)
-                st.markdown(f"**Line {idx}**")
+                st.markdown(f'<p class="line-title">Line {idx}</p>', unsafe_allow_html=True)
                 render_balls(nums, "main-ball")
                 render_balls(stars, "star-ball")
 
-            st.info("For entertainment only — lottery outcomes are random and not predictable.")
-            st.markdown('<p class="tip">Tip: generate a few batches and pick the line style you prefer.</p>', unsafe_allow_html=True)
+            st.markdown(
+                '<div class="disclaimer"><strong>For entertainment only.</strong> '
+                'Lottery outcomes are random and not predictable.<br/>'
+                'Tip: generate a few batches and pick the line style you prefer.</div>',
+                unsafe_allow_html=True,
+            )
