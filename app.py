@@ -16,6 +16,37 @@ def fetch_draws():
     return response.json()
 
 
+def _find_first_value(payload, keys):
+    """Return the first non-empty value from known keys."""
+    for key in keys:
+        value = payload.get(key)
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def extract_rollover_data(draw):
+    """Extract rollover flag and jackpot amount from a draw payload."""
+    rollover = _find_first_value(draw, ["rollover", "isRollover", "is_rollover", "hasRollover"])
+
+    jackpot = _find_first_value(
+        draw,
+        [
+            "nextJackpot",
+            "next_jackpot",
+            "jackpot",
+            "jackpotAmount",
+            "jackpot_amount",
+            "amount",
+        ],
+    )
+
+    if isinstance(jackpot, dict):
+        jackpot = _find_first_value(jackpot, ["amount", "value", "display", "formatted"]) or jackpot
+
+    return rollover, jackpot
+
+
 def weighted_unique_pick(pool_counter, k):
     """Pick k unique values, weighted by frequency."""
     remaining = dict(pool_counter)
@@ -189,6 +220,26 @@ h1, h2, h3, p, label, li, span, div, small {
 """,
     unsafe_allow_html=True,
 )
+
+try:
+    latest_draws = fetch_draws()
+except requests.RequestException:
+    st.caption("Could not check rollover status right now.")
+else:
+    if latest_draws:
+        rollover_flag, rollover_amount = extract_rollover_data(latest_draws[0])
+
+        if rollover_flag is True:
+            message = "🔥 Rollover is active"
+        elif rollover_flag is False:
+            message = "✅ No rollover currently"
+        else:
+            message = "ℹ️ Rollover status unavailable"
+
+        if rollover_amount is not None:
+            message += f" — {rollover_amount}"
+
+        st.caption(message)
 
 st.markdown(
     """
