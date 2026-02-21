@@ -68,13 +68,46 @@ html, body, [class*="css"]  {font-family: 'Inter', sans-serif;}
       radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.18), transparent 30%),
       radial-gradient(circle at 85% 25%, rgba(59, 130, 246, 0.12), transparent 30%),
       linear-gradient(180deg, #0f172a 0%, #111827 100%);
-    color: #e2e8f0;
+    color: #f8fafc;
 }
 
 .block-container {
-    max-width: 460px;
-    padding-top: 1.5rem;
-    padding-bottom: 2rem;
+    max-width: 430px;
+    padding-top: 1.2rem;
+    padding-bottom: 1.6rem;
+}
+
+[data-testid="stAppViewContainer"] {
+    display: flex;
+    justify-content: center;
+}
+
+[data-testid="stAppViewContainer"] > .main {
+    max-width: 470px;
+    width: 100%;
+    margin: 0 auto;
+}
+
+.main .block-container {
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.7));
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 2.1rem;
+    box-shadow: 0 24px 52px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.09);
+    padding-left: 1.05rem;
+    padding-right: 1.05rem;
+    position: relative;
+}
+
+.main .block-container::before {
+    content: "";
+    position: absolute;
+    top: 0.55rem;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 6rem;
+    height: 0.35rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.35);
 }
 
 [data-testid="stVerticalBlockBorderWrapper"] {
@@ -86,7 +119,22 @@ html, body, [class*="css"]  {font-family: 'Inter', sans-serif;}
 
 .hero {margin-bottom: 1rem;}
 .hero h1 {font-size: 1.75rem; margin-bottom: 0.3rem;}
-.hero p {opacity: 0.86; margin: 0; font-size: 0.96rem;}
+.hero p {color: #e2e8f0; margin: 0; font-size: 0.96rem;}
+
+h1, h2, h3, p, label, li, span, div, small {
+    color: #f8fafc;
+}
+
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] li,
+[data-testid="stCaptionContainer"],
+[data-testid="stRadio"] label,
+[data-testid="stSlider"] label,
+[data-testid="stWidgetLabel"],
+[data-testid="stMetricLabel"],
+[data-testid="stMetricValue"] {
+    color: #f8fafc !important;
+}
 
 [data-testid="stMetric"] {
     border-radius: 0.85rem;
@@ -130,6 +178,12 @@ html, body, [class*="css"]  {font-family: 'Inter', sans-serif;}
     background: rgba(15, 23, 42, 0.7);
     padding: 0.8rem;
     font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .main .block-container {
+        border-radius: 1.55rem;
+    }
 }
 </style>
 """,
