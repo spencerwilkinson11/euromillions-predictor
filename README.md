@@ -1,6 +1,6 @@
 # EuroMillions Generator App
 
-A Streamlit app that creates EuroMillions lines from historical draws.
+An app that creates EuroMillions lines from historical draws.
 
 ## Features
 - Weighted mode (historical frequency bias)
