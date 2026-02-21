@@ -213,7 +213,7 @@ if generate:
             st.markdown(
                 '<div class="disclaimer"><strong>For entertainment only.</strong> '
                 'Lottery outcomes are random and not predictable.<br/>'
-                'Tip: if you want surprise-heavy picks, try Pure random mode.</div>',
+                'Tip: generate a few batches and pick the line style you prefer.</div>',
                 unsafe_allow_html=True,
             )
 

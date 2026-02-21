@@ -3,13 +3,11 @@
 A Streamlit app that creates EuroMillions lines from historical draws.
 
 ## Features
-- Mobile-style card UI optimized for narrow screens
-- Softer, high-contrast text on a dark gradient background
-- Weighted mode (historical frequency bias)
-- Pure random mode
-- Multi-line generation (up to 10 lines)
-- Draw-count control for history window
-- Styled number and star balls with quick stats
+- Mobile-friendly card layout with a graphic hero header
+- Readable, high-contrast text on a dark gradient theme
+- Weighted mode (historical frequency bias) and pure-random mode
+- Multi-line generation (up to 10 lines) with history window controls
+- Styled number/star balls and quick stats after each generation
 
 ## Run locally
 ```bash
