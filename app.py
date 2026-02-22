@@ -50,31 +50,91 @@ def _normalize_bool(value):
     return None
 
 
+def _format_jackpot_value(value):
+    """Normalize jackpot values into an easy-to-read Euro amount."""
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, (int, float)):
+        return f"€{value:,.0f}"
+
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+
+        compact = stripped.replace("€", "").replace(",", "").replace(" ", "")
+        if compact.isdigit():
+            return f"€{int(compact):,}"
+
+        return stripped
+
+    return str(value)
+
+
 def extract_rollover_data(draw):
-    """Extract rollover flag and jackpot amount from a draw payload."""
+    """Extract rollover flag and jackpot details from a draw payload."""
     rollover = _find_first_value(draw, ["rollover", "isRollover", "is_rollover", "hasRollover"])
     rollover = _normalize_bool(rollover)
 
-    jackpot = _find_first_value(
+    current_jackpot = _find_first_value(
         draw,
         [
-            "nextJackpot",
-            "next_jackpot",
             "jackpot",
             "jackpotAmount",
             "jackpot_amount",
+            "prize",
             "amount",
         ],
     )
 
-    if isinstance(jackpot, dict):
-        jackpot = _find_first_value(jackpot, ["amount", "value", "display", "formatted"]) or jackpot
+    next_jackpot = _find_first_value(
+        draw,
+        [
+            "nextJackpot",
+            "next_jackpot",
+            "estimatedJackpot",
+            "estimated_jackpot",
+        ],
+    )
 
-    if isinstance(jackpot, (int, float)):
-        jackpot = f"€{jackpot:,.0f}"
+    if isinstance(current_jackpot, dict):
+        current_jackpot = _find_first_value(current_jackpot, ["amount", "value", "display", "formatted"]) or current_jackpot
 
-    return rollover, jackpot
+    if isinstance(next_jackpot, dict):
+        next_jackpot = _find_first_value(next_jackpot, ["amount", "value", "display", "formatted"]) or next_jackpot
 
+    current_jackpot = _format_jackpot_value(current_jackpot)
+    next_jackpot = _format_jackpot_value(next_jackpot)
+
+    display_jackpot = next_jackpot if rollover is True and next_jackpot else current_jackpot or next_jackpot
+
+    return rollover, display_jackpot, current_jackpot, next_jackpot
+
+
+
+
+def build_jackpot_summary(draw):
+    """Build user-facing jackpot summary and detail text for the latest draw."""
+    rollover_flag, jackpot_display, current_jackpot, next_jackpot = extract_rollover_data(draw)
+
+    if rollover_flag is True:
+        status = "🔥 Rollover active"
+        detail = "Prize pot rolled over from the previous draw."
+    elif rollover_flag is False:
+        status = "✅ No rollover"
+        detail = "Jackpot was won in the previous draw."
+    else:
+        status = "ℹ️ Rollover status unavailable"
+        detail = "Rollover flag is missing from the latest payload."
+
+    if jackpot_display:
+        status += f" — {jackpot_display}"
+
+    if rollover_flag is True and current_jackpot and next_jackpot:
+        detail = f"Rolled from {current_jackpot} to {next_jackpot}."
+
+    return status, detail
 
 def weighted_unique_pick(pool_counter, k):
     """Pick k unique values, weighted by frequency."""
@@ -250,25 +310,16 @@ h1, h2, h3, p, label, li, span, div, small {
     unsafe_allow_html=True,
 )
 
+jackpot_status = "⚠️ Jackpot unavailable"
+jackpot_detail = "Could not fetch the latest EuroMillions draw right now."
+
 try:
     latest_draws = fetch_draws()
 except requests.RequestException:
-    st.caption("Could not check rollover status right now.")
+    pass
 else:
     if latest_draws:
-        rollover_flag, rollover_amount = extract_rollover_data(latest_draws[0])
-
-        if rollover_flag is True:
-            message = "🔥 Rollover is active"
-        elif rollover_flag is False:
-            message = "✅ No rollover currently"
-        else:
-            message = "ℹ️ Rollover status unavailable"
-
-        if rollover_amount is not None:
-            message += f" — {rollover_amount}"
-
-        st.caption(message)
+        jackpot_status, jackpot_detail = build_jackpot_summary(latest_draws[0])
 
 st.markdown(
     """
@@ -279,6 +330,11 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
+
+with st.container(border=True):
+    st.subheader("EuroMillions Jackpot")
+    st.metric("Latest jackpot", jackpot_status)
+    st.caption(jackpot_detail)
 
 with st.container(border=True):
     st.subheader("Create your play lines")
