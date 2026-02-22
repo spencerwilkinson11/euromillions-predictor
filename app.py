@@ -77,6 +77,16 @@ def extract_rollover_data(draw):
     rollover = _find_first_value(draw, ["rollover", "isRollover", "is_rollover", "hasRollover"])
     rollover = _normalize_bool(rollover)
 
+    rollover_amount = _find_first_value(
+        draw,
+        [
+            "rolloverAmount",
+            "rollover_amount",
+            "rolloverJackpot",
+            "rollover_jackpot",
+        ],
+    )
+
     current_jackpot = _find_first_value(
         draw,
         [
@@ -104,19 +114,30 @@ def extract_rollover_data(draw):
     if isinstance(next_jackpot, dict):
         next_jackpot = _find_first_value(next_jackpot, ["amount", "value", "display", "formatted"]) or next_jackpot
 
+    if isinstance(rollover_amount, dict):
+        rollover_amount = _find_first_value(rollover_amount, ["amount", "value", "display", "formatted"]) or rollover_amount
+
     current_jackpot = _format_jackpot_value(current_jackpot)
     next_jackpot = _format_jackpot_value(next_jackpot)
+    rollover_amount = _format_jackpot_value(rollover_amount)
 
-    display_jackpot = next_jackpot if rollover is True and next_jackpot else current_jackpot or next_jackpot
+    if rollover is None and rollover_amount:
+        rollover = True
 
-    return rollover, display_jackpot, current_jackpot, next_jackpot
+    display_jackpot = (
+        next_jackpot
+        if rollover is True and next_jackpot
+        else rollover_amount or current_jackpot or next_jackpot
+    )
+
+    return rollover, display_jackpot, current_jackpot, next_jackpot, rollover_amount
 
 
 
 
 def build_jackpot_summary(draw):
     """Build user-facing jackpot summary and detail text for the latest draw."""
-    rollover_flag, jackpot_display, current_jackpot, next_jackpot = extract_rollover_data(draw)
+    rollover_flag, jackpot_display, current_jackpot, next_jackpot, rollover_amount = extract_rollover_data(draw)
 
     if rollover_flag is True:
         status = "🔥 Rollover active"
@@ -133,6 +154,8 @@ def build_jackpot_summary(draw):
 
     if rollover_flag is True and current_jackpot and next_jackpot:
         detail = f"Rolled from {current_jackpot} to {next_jackpot}."
+    elif rollover_flag is True and rollover_amount and not next_jackpot:
+        detail = f"Latest payload reports a rollover amount of {rollover_amount}."
 
     return status, detail
 
