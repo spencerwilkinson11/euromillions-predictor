@@ -57,6 +57,65 @@ def _normalize_bool(value):
     return None
 
 
+def _normalize_int(value):
+    """Convert loosely-typed numeric values to int when possible."""
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        digits = "".join(ch for ch in value if ch.isdigit())
+        if digits:
+            return int(digits)
+    return None
+
+
+def _extract_jackpot_winners(draw):
+    """Best-effort extraction of jackpot winners from inconsistent payloads."""
+    direct_winners = _find_first_value(
+        draw,
+        [
+            "jackpotWinners",
+            "jackpot_winners",
+            "numberOfJackpotWinners",
+            "jackpotWinnerCount",
+            "jackpotWinner",
+            "topPrizeWinners",
+        ],
+    )
+    direct_winners = _normalize_int(direct_winners)
+    if direct_winners is not None:
+        return direct_winners
+
+    breakdown = _find_first_value(draw, ["prizeBreakdown", "breakdown", "prizes", "tiers"])
+    if isinstance(breakdown, dict):
+        for top_key in ["1", "1st", "first", "tier1", "rank1", "division1", "match5+2", "5+2"]:
+            tier = breakdown.get(top_key)
+            if isinstance(tier, dict):
+                winners = _normalize_int(
+                    _find_first_value(tier, ["winners", "winnerCount", "numberOfWinners", "tickets"])
+                )
+                if winners is not None:
+                    return winners
+
+    if isinstance(breakdown, list):
+        for tier in breakdown:
+            if not isinstance(tier, dict):
+                continue
+            rank = _find_first_value(tier, ["rank", "tier", "division", "category", "name"])
+            normalized_rank = str(rank).strip().lower() if rank is not None else ""
+            if normalized_rank in {"1", "1st", "first", "tier1", "division1", "match5+2", "5+2"}:
+                winners = _normalize_int(
+                    _find_first_value(tier, ["winners", "winnerCount", "numberOfWinners", "tickets"])
+                )
+                if winners is not None:
+                    return winners
+
+    return None
+
+
 def _format_jackpot_value(value):
     """Normalize jackpot values into an easy-to-read Euro amount."""
     if value in (None, ""):
@@ -94,6 +153,11 @@ def extract_rollover_data(draw):
         ],
     )
     rollover = _normalize_bool(rollover)
+
+    if rollover is None:
+        jackpot_winners = _extract_jackpot_winners(draw)
+        if jackpot_winners is not None:
+            rollover = jackpot_winners == 0
 
     rollover_amount = _find_first_value(
         draw,
