@@ -17,17 +17,43 @@ def fetch_draws():
 
 
 def _find_first_value(payload, keys):
-    """Return the first non-empty value from known keys."""
-    for key in keys:
-        value = payload.get(key)
-        if value not in (None, ""):
+    """Return the first non-empty value from known keys in a nested payload."""
+    if not isinstance(payload, dict):
+        return None
+
+    lowered_keys = {key.lower() for key in keys}
+
+    for key, value in payload.items():
+        if key.lower() in lowered_keys and value not in (None, ""):
             return value
+
+    for value in payload.values():
+        if isinstance(value, dict):
+            nested_value = _find_first_value(value, keys)
+            if nested_value not in (None, ""):
+                return nested_value
+
+    return None
+
+
+def _normalize_bool(value):
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int):
+        return bool(value)
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"true", "yes", "y", "1"}:
+            return True
+        if normalized in {"false", "no", "n", "0"}:
+            return False
     return None
 
 
 def extract_rollover_data(draw):
     """Extract rollover flag and jackpot amount from a draw payload."""
     rollover = _find_first_value(draw, ["rollover", "isRollover", "is_rollover", "hasRollover"])
+    rollover = _normalize_bool(rollover)
 
     jackpot = _find_first_value(
         draw,
@@ -43,6 +69,9 @@ def extract_rollover_data(draw):
 
     if isinstance(jackpot, dict):
         jackpot = _find_first_value(jackpot, ["amount", "value", "display", "formatted"]) or jackpot
+
+    if isinstance(jackpot, (int, float)):
+        jackpot = f"€{jackpot:,.0f}"
 
     return rollover, jackpot
 
