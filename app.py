@@ -1,5 +1,6 @@
 import random
 from collections import Counter
+from typing import Optional
 
 import requests
 import streamlit as st
@@ -116,6 +117,44 @@ def _extract_jackpot_winners(draw):
     return None
 
 
+def get_rollover_status(draws: list[dict]) -> Optional[bool]:
+    """Return rollover status for the latest draw.
+
+    Priority:
+    1) Use explicit rollover flags when present.
+    2) Otherwise infer from jackpot winners in the latest draw.
+    3) Return None when there isn't enough reliable data.
+    """
+    if not draws or not isinstance(draws, list):
+        return None
+
+    latest_draw = draws[0] if isinstance(draws[0], dict) else None
+    if not latest_draw:
+        return None
+
+    explicit_flag = _find_first_value(
+        latest_draw,
+        [
+            "rolloverFlag",
+            "rollover",
+            "isRollover",
+            "is_rollover",
+            "hasRollover",
+            "isRolloverDraw",
+            "didRollover",
+        ],
+    )
+    explicit_flag = _normalize_bool(explicit_flag)
+    if explicit_flag is not None:
+        return explicit_flag
+
+    jackpot_winners = _extract_jackpot_winners(latest_draw)
+    if jackpot_winners is None:
+        return None
+
+    return jackpot_winners == 0
+
+
 def _format_jackpot_value(value):
     """Normalize jackpot values into an easy-to-read Euro amount."""
     if value in (None, ""):
@@ -219,17 +258,18 @@ def extract_rollover_data(draw):
 
 def build_jackpot_summary(draw):
     """Build user-facing jackpot summary and detail text for the latest draw."""
-    rollover_flag, jackpot_display, current_jackpot, next_jackpot, rollover_amount = extract_rollover_data(draw)
+    rollover_flag = get_rollover_status([draw])
+    _, jackpot_display, current_jackpot, next_jackpot, rollover_amount = extract_rollover_data(draw)
 
     if rollover_flag is True:
-        status = "🔥 Rollover active"
+        status = "Rollover ✅"
         detail = "Prize pot rolled over from the previous draw."
     elif rollover_flag is False:
-        status = "✅ No rollover"
+        status = "Not a rollover ❌"
         detail = "Jackpot was won in the previous draw."
     else:
         status = "ℹ️ Rollover status unavailable"
-        detail = "Rollover flag is missing from the latest payload."
+        detail = "Could not determine rollover from the latest payload."
 
     if jackpot_display:
         status += f" — {jackpot_display}"
