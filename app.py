@@ -30,6 +30,7 @@ _render_insight_card = _resolve_ui_function("render_insight_card")
 _render_last_result_banner = _resolve_ui_function("render_last_result_banner", "render_last_result")
 _render_result_card = _resolve_ui_function("render_result_card")
 _render_app_header = _resolve_ui_function("render_app_header")
+_render_number_balls = _resolve_ui_function("render_number_balls")
 
 
 def app_styles() -> str:
@@ -65,6 +66,27 @@ def render_insight_card(title: str, body: str, icon: str = "") -> None:
 
     st.markdown(f"**{icon} {title}**")
     st.markdown(body, unsafe_allow_html=True)
+
+
+def render_number_balls(
+    mains: list[int],
+    stars: list[int] | None = None,
+    matched_mains: set[int] | None = None,
+    matched_stars: set[int] | None = None,
+    show_plus: bool = True,
+) -> str:
+    if _render_number_balls:
+        return _render_number_balls(
+            mains,
+            stars,
+            matched_mains=matched_mains,
+            matched_stars=matched_stars,
+            show_plus=show_plus,
+        )
+
+    main_markup = "".join([f"<span>{int(value)}</span>" for value in mains])
+    stars_markup = "".join([f"<span>{int(value)}</span>" for value in (stars or [])])
+    return f"<div>{main_markup} + {stars_markup}</div>"
 
 st.set_page_config(page_title="Wilkos LuckyLogic", layout="wide")
 
@@ -244,23 +266,17 @@ def _render_ticket_line_with_matches(line: dict, winning_mains: set[int], winnin
     mains = line.get("main", [])
     stars = line.get("stars", [])
 
-    main_markup = "".join(
-        [
-            f'<span class="ball {"matched" if value in winning_mains else ""}">{int(value)}</span>'
-            for value in mains
-        ]
-    )
-    star_markup = "".join(
-        [
-            f'<span class="ball star {"matched" if value in winning_stars else ""}">{int(value)}</span>'
-            for value in stars
-        ]
+    balls_markup = render_number_balls(
+        mains,
+        stars,
+        matched_mains=(set(mains) & winning_mains),
+        matched_stars=(set(stars) & winning_stars),
     )
 
     matches = sum(1 for value in mains if value in winning_mains) + sum(1 for value in stars if value in winning_stars)
     return (
         '<div class="ticket-match-line">'
-        f'<div class="ticket-line-balls"><div class="ball-group">{main_markup}</div><div class="ball-divider">+</div><div class="ball-group">{star_markup}</div></div>'
+        f'<div class="ticket-line-balls">{balls_markup}</div>'
         f'<div class="match-count-badge">{matches}</div>'
         '</div>'
     )
@@ -690,9 +706,8 @@ else:
                 st.write(f"Status: {ticket.get('status', 'Pending')}")
                 lines = _safe_ticket_lines(ticket.get("lines", []))
                 for line_idx, line in enumerate(lines, start=1):
-                    st.markdown(
-                        f"**Line {line_idx}:** Main {', '.join(map(str, line['main']))} | Stars {', '.join(map(str, line['stars']))}"
-                    )
+                    st.markdown(f"**Line {line_idx}**")
+                    st.markdown(render_number_balls(line["main"], line["stars"]), unsafe_allow_html=True)
 
                 delete_key = f"delete_ticket_{ticket.get('id', index)}"
                 if st.button("Delete ticket", key=delete_key):
