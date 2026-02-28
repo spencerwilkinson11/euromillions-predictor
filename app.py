@@ -277,7 +277,7 @@ def _render_ticket_line_with_matches(line: dict, winning_mains: set[int], winnin
     return (
         '<div class="ticket-match-line">'
         f'<div class="ticket-line-balls">{balls_markup}</div>'
-        f'<div class="match-count-badge">{matches}</div>'
+        f'<div class="wl-match-badge">{matches}</div>'
         '</div>'
     )
 
@@ -465,6 +465,7 @@ def compute_insights(draws: list[dict], topn: int = 5):
 
 _ensure_ticket_state()
 st.markdown(app_styles(), unsafe_allow_html=True)
+st.markdown('<div class="wl-app">', unsafe_allow_html=True)
 if _render_app_header:
     st.markdown(_render_app_header(app_name="Wilkos LuckyLogic", tagline="Smarter EuroMillions picks"), unsafe_allow_html=True)
 else:
@@ -722,3 +723,5 @@ else:
                     _persist_tickets()
                     st.success("Ticket deleted.")
                     st.rerun()
+
+st.markdown('</div>', unsafe_allow_html=True)
