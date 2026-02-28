@@ -1,4 +1,5 @@
 from collections import Counter
+from datetime import datetime, timezone
 
 import pandas as pd
 import requests
@@ -42,6 +43,46 @@ def normalize_draws(draws: list[dict] | None) -> list[dict]:
         normalized.append(normalized_draw)
 
     return normalized
+
+
+def _parse_draw_timestamp(draw: dict) -> float:
+    """Parse draw date formats and return a sortable UTC timestamp."""
+    for key in ("date", "drawDate", "draw_date"):
+        value = draw.get(key)
+        if not value:
+            continue
+
+        text = str(value).strip()
+        parsed_dt: datetime | None = None
+
+        try:
+            parsed_dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
+        except ValueError:
+            for pattern in ("%Y-%m-%d", "%d/%m/%Y"):
+                try:
+                    parsed_dt = datetime.strptime(text, pattern)
+                    break
+                except ValueError:
+                    continue
+
+        if parsed_dt is None:
+            continue
+
+        if parsed_dt.tzinfo is None:
+            parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
+        else:
+            parsed_dt = parsed_dt.astimezone(timezone.utc)
+
+        return parsed_dt.timestamp()
+
+    return float("-inf")
+
+
+def prepare_draws(draws: list[dict] | None, history_n: int) -> list[dict]:
+    """Normalize, sort newest-first by parsed date, and slice recent history."""
+    normalized = normalize_draws(draws)
+    ordered = sorted(normalized, key=_parse_draw_timestamp, reverse=True)
+    return ordered[:history_n]
 
 
 @st.cache_data(show_spinner=False)
@@ -101,7 +142,7 @@ if generate:
         st.caption(f"Technical details: {exc}")
         st.stop()
 
-    draws = normalize_draws(all_draws[:max_draws])
+    draws = prepare_draws(all_draws, max_draws)
     if not draws:
         st.warning("No draw data available from the API.")
         st.stop()
