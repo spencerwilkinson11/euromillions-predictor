@@ -931,7 +931,7 @@ div[data-testid="stExpander"] summary {
   color: #ffffff !important;
 }
 
-/* Navigation tabs (Picks / Insights / Tickets): match Generate Decision Lines button */
+/* Navigation tabs (Picks / Insights / Tickets): persistent active red border */
 div[data-testid="stSegmentedControl"] button,
 div[role="radiogroup"] label,
 div[data-baseweb="button-group"] button {
@@ -939,7 +939,7 @@ div[data-baseweb="button-group"] button {
   color: #ffffff !important;
   border: 2px solid transparent !important;
   border-radius: 12px !important;
-  padding: 0.75rem 1rem !important;
+  padding: 8px 16px !important;
   transition: all 0.2s ease !important;
 }
 
@@ -947,11 +947,11 @@ div[data-testid="stSegmentedControl"] button:hover,
 div[role="radiogroup"] label:hover,
 div[data-baseweb="button-group"] button:hover {
   border: 2px solid #ff4b4b !important;
-  background: #0b1b2b !important;
-  color: #ffffff !important;
 }
 
+/* Keep this block after hover so the selected page stays highlighted */
 div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
 div[data-testid="stSegmentedControl"] [aria-selected="true"],
 div[role="radiogroup"] input:checked + div,
 div[role="radiogroup"] input:checked + label,
@@ -966,6 +966,13 @@ div[data-testid="stSegmentedControl"] *,
 div[role="radiogroup"] *,
 div[data-baseweb="button-group"] * {
   background: transparent !important;
+}
+
+div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
+div[data-testid="stSegmentedControl"] [aria-selected="true"],
+div[data-baseweb="button-group"] button[aria-selected="true"] {
+  box-shadow: 0 0 0 1px rgba(255, 75, 75, 0.35) !important;
 }
 
 div[data-testid="stSegmentedControl"] button:focus,
