@@ -30,7 +30,7 @@ def _format_draw_date(value: object) -> str:
             except ValueError:
                 continue
 
-    return parsed.strftime("%a %d %b %Y") if parsed else raw
+    return parsed.strftime("%d %b %Y") if parsed else raw
 
 
 def _format_jackpot(value: object) -> str | None:
