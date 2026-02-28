@@ -57,5 +57,25 @@ h1, h2, h3, p, label, li, span, div, small { color: #f8fafc; }
   padding: 0.8rem;
   font-size: 0.9rem;
 }
+/* Improve Streamlit selectbox readability in dark theme */
+div[data-baseweb="select"] > div {
+  color: #f8fafc !important;
+  background-color: rgba(30, 41, 59, 0.95) !important;
+}
+div[data-baseweb="select"] input {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+div[role="listbox"] {
+  background-color: #f8fafc !important;
+}
+div[role="option"] {
+  color: #0f172a !important;
+  background-color: #f8fafc !important;
+}
+div[role="option"][aria-selected="true"] {
+  background-color: #dbeafe !important;
+  color: #0f172a !important;
+}
 </style>
 """
