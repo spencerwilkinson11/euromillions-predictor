@@ -710,38 +710,38 @@ div[data-baseweb="popover"] ul[role="listbox"] {
   box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22) !important;
 }
 
-div[data-baseweb="popover"] ul[role="listbox"] li,
-div[data-baseweb="popover"] ul[role="listbox"] li *,
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"],
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"] * {
-  background: #ffffff !important;
+/* ===== FORCE CLEAN HOVER TEXT (NO GREY) ===== */
+div[data-baseweb="popover"] ul li:hover,
+div[data-baseweb="popover"] ul li:hover *,
+div[data-baseweb="popover"] ul [role="option"]:hover,
+div[data-baseweb="popover"] ul [role="option"]:hover * {
+  background: #f3f4f6 !important;
+  color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
+  opacity: 1 !important;
+}
+
+div[data-baseweb="popover"] ul li,
+div[data-baseweb="popover"] ul li *,
+div[data-baseweb="popover"] ul [role="option"],
+div[data-baseweb="popover"] ul [role="option"] * {
   color: #111111 !important;
   -webkit-text-fill-color: #111111 !important;
   opacity: 1 !important;
-  font-weight: 500 !important;
 }
 
-div[data-baseweb="popover"] ul[role="listbox"] li:hover,
-div[data-baseweb="popover"] ul[role="listbox"] li:hover *,
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover,
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover *,
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"][data-highlighted="true"],
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"][data-highlighted="true"] * {
-  background: #f1f3f6 !important;
-  color: #000000 !important;
-  -webkit-text-fill-color: #000000 !important;
-  text-shadow: none !important;
-  opacity: 1 !important;
-}
-
-div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"],
-div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"] *,
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-selected="true"],
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-selected="true"] * {
+div[data-baseweb="popover"] ul li[aria-selected="true"],
+div[data-baseweb="popover"] ul li[aria-selected="true"] *,
+div[data-baseweb="popover"] ul [role="option"][aria-selected="true"],
+div[data-baseweb="popover"] ul [role="option"][aria-selected="true"] * {
   background: #e6f0ff !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
   opacity: 1 !important;
+}
+
+div[data-baseweb="popover"] * {
+  text-shadow: none !important;
 }
 
 div[data-baseweb="popover"] ul[role="listbox"] li[aria-disabled="true"],
