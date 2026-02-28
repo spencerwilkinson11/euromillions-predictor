@@ -236,34 +236,76 @@ html, body, [class*="css"] {
 .em-strategy { margin-top: 0.5rem; color: rgba(255,255,255,0.72); font-size: 0.8rem; }
 
 /* =========================================================
-   NAV
+   NAV: Streamlit segmented control (force dark segments)
    ========================================================= */
-div[data-testid="stSegmentedControl"] button,
+
+/* Force the whole segmented control area to be transparent */
+div[data-testid="stSegmentedControl"] {
+  background: transparent !important;
+}
+
+/* Force each segment button dark (unselected + selected) */
+div[data-testid="stSegmentedControl"] button {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border: var(--borderW) solid transparent !important;
+  border-radius: var(--radius) !important;
+  padding: var(--padY) var(--padX) !important;
+}
+
+/* Streamlit sometimes applies background to inner elements */
+div[data-testid="stSegmentedControl"] button * {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Hover: red border, keep dark background */
+div[data-testid="stSegmentedControl"] button:hover {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Active (selected): persistent red border */
+div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
+div[data-testid="stSegmentedControl"] [aria-selected="true"] {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Remove any default light track/background around segments */
+div[data-testid="stSegmentedControl"] div,
+div[data-testid="stSegmentedControl"] span {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
+/* =========================================================
+   NAV: Radio fallback (force dark labels)
+   ========================================================= */
+
 div[role="radiogroup"] label {
   background: var(--panel) !important;
   color: var(--text) !important;
   border: var(--borderW) solid transparent !important;
   border-radius: var(--radius) !important;
   padding: var(--padY) var(--padX) !important;
-  transition: all 0.15s ease !important;
 }
 
-div[data-testid="stSegmentedControl"] button:hover,
 div[role="radiogroup"] label:hover {
   background: var(--panel) !important;
-  color: var(--text) !important;
   border-color: var(--accent) !important;
 }
 
-div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
-div[data-testid="stSegmentedControl"] [aria-selected="true"],
 div[role="radiogroup"] input:checked + div,
 div[role="radiogroup"] input:checked + label {
   background: var(--panel) !important;
-  color: var(--text) !important;
   border-color: var(--accent) !important;
 }
 
+/* Kill grey focus rings */
 div[data-testid="stSegmentedControl"] button:focus,
 div[role="radiogroup"] label:focus-within {
   outline: none !important;
