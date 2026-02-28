@@ -1,6 +1,7 @@
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Callable
+import xml.etree.ElementTree as ET
 
 import pandas as pd
 import requests
@@ -32,9 +33,9 @@ def app_styles() -> str:
     return ""
 
 
-def render_last_result_banner(draw: dict | None, brand_text: str = "Wilkos LuckyLogic") -> str:
+def render_last_result_banner(draw: dict | None, brand_text: str = "Wilkos LuckyLogic", jackpot_html: str = "") -> str:
     if _render_last_result_banner:
-        return _render_last_result_banner(draw, brand_text=brand_text)
+        return _render_last_result_banner(draw, brand_text=brand_text, jackpot_html=jackpot_html)
     return (
         '<div class="last-result-banner"><div class="last-result-main"><h2>Last result</h2>'
         "<p>No draw data available right now.</p></div></div>"
@@ -70,6 +71,46 @@ def fetch_draws():
     response = requests.get(url, timeout=10)
     response.raise_for_status()
     return response.json()
+
+
+@st.cache_data(ttl=60 * 60)
+def fetch_national_lottery_euromillions_meta() -> dict:
+    url = "https://www.national-lottery.co.uk/results/euromillions/draw-history/xml"
+    try:
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        root = ET.fromstring(response.text)
+
+        latest_draw = None
+        for draw in root.findall(".//draw-results"):
+            latest_flag = draw.findtext("is-latest-draw")
+            if (latest_flag or "").strip().upper() == "Y":
+                latest_draw = draw
+                break
+
+        if latest_draw is None:
+            latest_draw = root.find(".//draw-results")
+
+        if latest_draw is None:
+            return {"ok": False}
+
+        jackpot_amount_text = latest_draw.findtext(".//game/jackpot-amount")
+        next_draw_day = latest_draw.findtext(".//game/next-draw-day")
+
+        jackpot_amount = None
+        if jackpot_amount_text:
+            cleaned = jackpot_amount_text.replace(",", "").strip()
+            if cleaned.isdigit():
+                jackpot_amount = int(cleaned)
+
+        return {
+            "ok": True,
+            "jackpot_amount": jackpot_amount,
+            "next_draw_day": (next_draw_day or "").strip().title(),
+            "source": url,
+        }
+    except Exception:
+        return {"ok": False}
 
 
 def normalize_draws(draws: list[dict] | None) -> list[dict]:
@@ -170,7 +211,16 @@ except requests.RequestException:
 
 ordered_draws = prepare_draws(all_draws, len(all_draws) if all_draws else 0)
 most_recent = ordered_draws[0] if ordered_draws else None
-st.markdown(render_last_result_banner(most_recent, brand_text="Wilkos LuckyLogic"), unsafe_allow_html=True)
+meta = fetch_national_lottery_euromillions_meta()
+jackpot_html = (
+    ui_components.render_jackpot_card(meta.get("jackpot_amount"), meta.get("next_draw_day"))
+    if meta.get("ok")
+    else ui_components.render_jackpot_card(None, None)
+)
+st.markdown(
+    render_last_result_banner(most_recent, brand_text="Wilkos LuckyLogic", jackpot_html=jackpot_html),
+    unsafe_allow_html=True,
+)
 
 left, main = st.columns([1, 2], gap="large")
 
