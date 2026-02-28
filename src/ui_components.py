@@ -1,6 +1,123 @@
 from __future__ import annotations
 
+from datetime import datetime
+
 import streamlit as st
+
+
+def _first_available(draw: dict, keys: tuple[str, ...]) -> object | None:
+    for key in keys:
+        if draw.get(key) not in (None, ""):
+            return draw.get(key)
+    return None
+
+
+def _format_draw_date(value: object) -> str:
+    if not value:
+        return "Date unavailable"
+
+    raw = str(value).strip()
+    parsed: datetime | None = None
+
+    try:
+        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError:
+        for pattern in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+            try:
+                parsed = datetime.strptime(raw, pattern)
+                break
+            except ValueError:
+                continue
+
+    return parsed.strftime("%a %d %b %Y") if parsed else raw
+
+
+def _format_jackpot(value: object) -> str | None:
+    if value in (None, ""):
+        return None
+
+    if isinstance(value, (int, float)):
+        return f"£{int(round(value)):,}"
+
+    text = str(value).strip()
+    digits = "".join(ch for ch in text if ch.isdigit() or ch in ".,")
+    if digits:
+        normalized = digits.replace(",", "")
+        try:
+            return f"£{int(float(normalized)):,}"
+        except ValueError:
+            pass
+
+    return text
+
+
+def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS") -> str:
+    if not draw:
+        return """
+        <div class=\"last-result-banner\">
+            <div class=\"last-result-main\">
+                <div class=\"last-result-brand\">EUROMILLIONS</div>
+                <h2>Last result</h2>
+                <p class=\"last-result-date\">No draw data available right now.</p>
+            </div>
+            <div class=\"last-result-cta-panel\">
+                <div class=\"last-result-cta-title\">Are you a winner?</div>
+                <a class=\"last-result-cta-button\" href=\"https://www.national-lottery.co.uk/results/euromillions\" target=\"_blank\" rel=\"noopener noreferrer\">Check results</a>
+            </div>
+        </div>
+        """
+
+    main_numbers: list[int] = []
+    for value in draw.get("numbers", []) or []:
+        try:
+            main_numbers.append(int(value))
+        except (TypeError, ValueError):
+            continue
+
+    lucky_stars: list[int] = []
+    for value in draw.get("stars", []) or []:
+        try:
+            lucky_stars.append(int(value))
+        except (TypeError, ValueError):
+            continue
+
+    draw_no = _first_available(draw, ("drawNo", "drawNumber", "draw_number", "draw-no"))
+    draw_date = _first_available(draw, ("date", "drawDate", "draw_date"))
+    jackpot = _first_available(draw, ("jackpot", "jackpotAmount", "estimatedJackpot", "topPrize", "jackpot_amount"))
+
+    draw_url = "https://www.national-lottery.co.uk/results/euromillions"
+    if draw_no not in (None, ""):
+        draw_url = f"{draw_url}/draw-details?drawNo={draw_no}"
+
+    numbers_markup = "".join([f'<span class="premium-ball">{value}</span>' for value in main_numbers])
+    stars_markup = "".join([f'<span class="premium-ball premium-star"><span>{value}</span></span>' for value in lucky_stars])
+
+    draw_meta = ""
+    if draw_no not in (None, ""):
+        draw_meta += f'<div class="last-result-meta-item"><span class="meta-label">Draw</span><strong>#{draw_no}</strong></div>'
+
+    formatted_jackpot = _format_jackpot(jackpot)
+    if formatted_jackpot:
+        draw_meta += f'<div class="last-result-meta-item"><span class="meta-label">Jackpot</span><strong>{formatted_jackpot}</strong></div>'
+
+    return f"""
+    <div class="last-result-banner">
+        <div class="last-result-main">
+            <div class="last-result-brand">{brand_text}</div>
+            <h2>Last result</h2>
+            <p class="last-result-date">{_format_draw_date(draw_date)}</p>
+            <div class="last-result-balls" aria-label="Latest winning numbers and lucky stars">
+                <div class="last-result-ball-row">{numbers_markup}</div>
+                <div class="last-result-stars-row">{stars_markup}</div>
+            </div>
+            <div class="last-result-meta-row">{draw_meta}</div>
+        </div>
+        <div class="last-result-cta-panel">
+            <div class="last-result-cta-title">Are you a winner?</div>
+            <a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>
+        </div>
+    </div>
+    """
 
 
 def render_balls(main_nums: list[int], stars: list[int]) -> None:
@@ -94,6 +211,162 @@ hr,
 .hero p {
   color: var(--muted);
   margin-top: 0.25rem;
+}
+
+.last-result-banner {
+  margin: 0.8rem 0 1rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background:
+    linear-gradient(125deg, rgba(15, 23, 42, 0.92), rgba(17, 27, 47, 0.84)),
+    radial-gradient(circle at 12% 18%, rgba(59, 130, 246, 0.16), transparent 30%),
+    radial-gradient(circle at 85% 12%, rgba(56, 189, 248, 0.12), transparent 35%);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.35);
+  padding: 1.15rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.last-result-main {
+  flex: 1;
+}
+
+.last-result-brand {
+  font-size: 0.74rem;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  color: #93c5fd;
+}
+
+.last-result-main h2 {
+  margin: 0.2rem 0 0;
+}
+
+.last-result-date {
+  margin: 0.2rem 0 0.65rem;
+  color: var(--muted);
+}
+
+.last-result-balls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.last-result-ball-row,
+.last-result-stars-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.premium-ball {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 28% 24%, #a5d8ff, #3b82f6 58%, #1d4ed8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 -5px 10px rgba(15, 23, 42, 0.26), 0 10px 18px rgba(2, 6, 23, 0.35);
+}
+
+.premium-ball::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  width: 55%;
+  height: 45%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0));
+}
+
+.premium-star {
+  background: radial-gradient(circle at 30% 20%, #fde68a, #f59e0b 60%, #b45309 100%);
+  color: #111827;
+}
+
+.premium-star::after {
+  content: "★";
+  position: absolute;
+  font-size: 0.45rem;
+  top: 2px;
+  right: 4px;
+  color: rgba(120, 53, 15, 0.85);
+}
+
+.last-result-meta-row {
+  margin-top: 0.7rem;
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.last-result-meta-item {
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 0.7rem;
+  background: rgba(15, 23, 42, 0.62);
+  padding: 0.35rem 0.6rem;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+
+.meta-label {
+  font-size: 0.74rem;
+  color: #93c5fd;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.last-result-cta-panel {
+  min-width: 210px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 0.9rem;
+  background: rgba(15, 23, 42, 0.55);
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 0.55rem;
+}
+
+.last-result-cta-title {
+  font-weight: 700;
+}
+
+.last-result-cta-button {
+  text-decoration: none;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.48rem 0.9rem;
+  color: #0f172a;
+  background: linear-gradient(180deg, #fef08a, #fbbf24);
+  border: 1px solid rgba(255, 255, 255, 0.48);
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  animation: ctaPulse 2.4s ease-in-out infinite;
+}
+
+.last-result-cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 13px 24px rgba(245, 158, 11, 0.45);
+}
+
+@keyframes ctaPulse {
+  0%, 100% { box-shadow: 0 8px 18px rgba(245, 158, 11, 0.3); }
+  50% { box-shadow: 0 12px 25px rgba(251, 191, 36, 0.4); }
 }
 
 .insight-card {
@@ -265,6 +538,26 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
 
   .insight-card {
     min-height: 6.2rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .last-result-banner {
+    flex-direction: column;
+  }
+
+  .last-result-cta-panel {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .last-result-cta-button,
+  .premium-ball,
+  .premium-star {
+    animation: none !important;
+    transition: none !important;
   }
 }
 </style>
