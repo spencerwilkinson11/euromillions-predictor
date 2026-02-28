@@ -20,6 +20,30 @@ def fetch_draws():
     return response.json()
 
 
+def normalize_draws(draws: list[dict] | None) -> list[dict]:
+    """Normalize draw payload values to stable integer lists for numbers/stars."""
+
+    def _safe_int_list(values: list | None) -> list[int]:
+        normalized_values: list[int] = []
+        for value in values or []:
+            if pd.isna(value):
+                continue
+            try:
+                normalized_values.append(int(value))
+            except (TypeError, ValueError):
+                continue
+        return normalized_values
+
+    normalized: list[dict] = []
+    for draw in draws or []:
+        normalized_draw = dict(draw)
+        normalized_draw["numbers"] = _safe_int_list(draw.get("numbers"))
+        normalized_draw["stars"] = _safe_int_list(draw.get("stars"))
+        normalized.append(normalized_draw)
+
+    return normalized
+
+
 @st.cache_data(show_spinner=False)
 def compute_insights(draws: list[dict], topn: int = 5):
     main_counter, star_counter = frequency_counter(draws)
@@ -77,7 +101,7 @@ if generate:
         st.caption(f"Technical details: {exc}")
         st.stop()
 
-    draws = all_draws[:max_draws]
+    draws = normalize_draws(all_draws[:max_draws])
     if not draws:
         st.warning("No draw data available from the API.")
         st.stop()
