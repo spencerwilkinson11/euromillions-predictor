@@ -23,6 +23,7 @@ _app_styles = _resolve_ui_function("app_styles")
 _render_insight_card = _resolve_ui_function("render_insight_card")
 _render_last_result_banner = _resolve_ui_function("render_last_result_banner", "render_last_result")
 _render_result_card = _resolve_ui_function("render_result_card")
+_render_app_header = _resolve_ui_function("render_app_header")
 
 
 def app_styles() -> str:
@@ -31,9 +32,9 @@ def app_styles() -> str:
     return ""
 
 
-def render_last_result_banner(draw: dict | None) -> str:
+def render_last_result_banner(draw: dict | None, brand_text: str = "Wilkos LuckyLogic") -> str:
     if _render_last_result_banner:
-        return _render_last_result_banner(draw)
+        return _render_last_result_banner(draw, brand_text=brand_text)
     return (
         '<div class="last-result-banner"><div class="last-result-main"><h2>Last result</h2>'
         "<p>No draw data available right now.</p></div></div>"
@@ -59,7 +60,7 @@ def render_insight_card(title: str, body: str, icon: str = "") -> None:
     st.markdown(f"**{icon} {title}**")
     st.markdown(body, unsafe_allow_html=True)
 
-st.set_page_config(page_title="EuroMillions AI Decision Engine", layout="wide")
+st.set_page_config(page_title="Wilkos LuckyLogic", layout="wide")
 
 
 @st.cache_data(ttl=60 * 60)
@@ -156,15 +157,11 @@ def compute_insights(draws: list[dict], topn: int = 5):
 
 
 st.markdown(app_styles(), unsafe_allow_html=True)
-st.markdown(
-    """
-<div class="hero">
-  <h1>🎰 EuroMillions AI Decision Engine</h1>
-  <p>AI-assisted number ideas based on historical draws.</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
+if _render_app_header:
+    st.markdown(_render_app_header(app_name="Wilkos LuckyLogic", tagline="Smarter EuroMillions picks"), unsafe_allow_html=True)
+else:
+    st.title("Wilkos LuckyLogic")
+    st.caption("Smarter EuroMillions picks")
 
 try:
     all_draws = fetch_draws()
@@ -173,7 +170,7 @@ except requests.RequestException:
 
 ordered_draws = prepare_draws(all_draws, len(all_draws) if all_draws else 0)
 most_recent = ordered_draws[0] if ordered_draws else None
-st.markdown(render_last_result_banner(most_recent), unsafe_allow_html=True)
+st.markdown(render_last_result_banner(most_recent, brand_text="Wilkos LuckyLogic"), unsafe_allow_html=True)
 
 left, main = st.columns([1, 2], gap="large")
 
