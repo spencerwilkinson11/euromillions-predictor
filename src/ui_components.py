@@ -53,11 +53,12 @@ def _format_jackpot(value: object) -> str | None:
 
 
 def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS") -> str:
+    safe_brand_text = escape(brand_text)
     if not draw:
-        return """
+        return f"""
         <div class=\"last-result-banner\">
             <div class=\"last-result-main\">
-                <div class=\"last-result-brand\">EUROMILLIONS</div>
+                <div class=\"last-result-brand\">{safe_brand_text}</div>
                 <h2>Last result</h2>
                 <p class=\"last-result-date\">No draw data available right now.</p>
             </div>
@@ -104,7 +105,7 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
     return f"""
     <div class="last-result-banner">
         <div class="last-result-main">
-            <div class="last-result-brand">{brand_text}</div>
+            <div class="last-result-brand">{safe_brand_text}</div>
             <h2>Last result</h2>
             <p class="last-result-date">{_format_draw_date(draw_date)}</p>
             <div class="last-result-balls" aria-label="Latest winning numbers and lucky stars">
@@ -118,6 +119,18 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
             <a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>
         </div>
     </div>
+    """
+
+
+def render_app_header(app_name: str = "Wilkos LuckyLogic", tagline: str = "Smarter EuroMillions picks") -> str:
+    return f"""
+    <header class="app-header" aria-label="{escape(app_name)} app header">
+        <div class="app-logo" aria-hidden="true">LL</div>
+        <div class="app-header-copy">
+            <h1 class="app-title">{escape(app_name)}</h1>
+            <p class="app-subtitle">{escape(tagline)}</p>
+        </div>
+    </header>
     """
 
 
@@ -225,6 +238,18 @@ html, body, [class*="css"] {
     radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.15), transparent 34%),
     linear-gradient(180deg, #0a1222 0%, var(--bg) 100%);
   color: var(--text);
+  animation: appFade 0.5s ease both;
+}
+
+@keyframes appFade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .block-container {
@@ -255,13 +280,49 @@ hr,
   border-color: var(--card-border) !important;
 }
 
-.hero {
-  margin-bottom: 0.5rem;
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0 0 0.6rem;
 }
 
-.hero p {
+.app-logo {
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #f8fafc;
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #06b6d4 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.45);
+}
+
+.app-header-copy {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.app-title {
+  margin: 0;
+  font-size: clamp(1.55rem, 2.1vw, 2.15rem);
+  font-weight: 800;
+  line-height: 1.1;
+  background: linear-gradient(90deg, #e2e8f0 0%, #93c5fd 40%, #a5b4fc 75%, #67e8f9 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.app-subtitle {
+  margin: 0;
   color: var(--muted);
-  margin-top: 0.25rem;
+  font-size: 0.95rem;
 }
 
 .last-result-banner {
@@ -272,8 +333,8 @@ hr,
     linear-gradient(125deg, rgba(15, 23, 42, 0.92), rgba(17, 27, 47, 0.84)),
     radial-gradient(circle at 12% 18%, rgba(59, 130, 246, 0.16), transparent 30%),
     radial-gradient(circle at 85% 12%, rgba(56, 189, 248, 0.12), transparent 35%);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 18px 44px rgba(2, 6, 23, 0.35);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 18px 42px rgba(2, 6, 23, 0.34);
   padding: 1.15rem;
   display: flex;
   justify-content: space-between;
@@ -329,6 +390,12 @@ hr,
   background: radial-gradient(circle at 28% 24%, #a5d8ff, #3b82f6 58%, #1d4ed8 100%);
   border: 1px solid rgba(255, 255, 255, 0.28);
   box-shadow: inset 0 -5px 10px rgba(15, 23, 42, 0.26), 0 10px 18px rgba(2, 6, 23, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.premium-ball:hover {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: inset 0 -5px 10px rgba(15, 23, 42, 0.26), 0 13px 24px rgba(2, 6, 23, 0.42);
 }
 
 .premium-ball::before {
@@ -491,11 +558,12 @@ hr,
 }
 
 .em-card {
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(148, 163, 184, 0.24);
   border-radius: 18px;
   padding: 16px;
-  box-shadow: 0 12px 26px rgba(2, 6, 23, 0.18);
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.22);
+  backdrop-filter: blur(10px);
   animation: emFadeIn 0.45s ease both;
   animation-delay: var(--em-card-delay, 0ms);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -695,6 +763,17 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
 }
 
 @media (max-width: 640px) {
+  .app-header {
+    align-items: flex-start;
+  }
+
+  .app-logo {
+    width: 2.8rem;
+    height: 2.8rem;
+    border-radius: 0.8rem;
+    font-size: 1.05rem;
+  }
+
   .ball {
     width: 2rem;
     height: 2rem;
@@ -722,6 +801,7 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .stApp,
   .last-result-cta-button,
   .premium-ball,
   .premium-star,
