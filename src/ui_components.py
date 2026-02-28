@@ -181,40 +181,52 @@ hr,
 div[data-baseweb="select"] > div {
   background: var(--bg-elevated) !important;
   border-color: rgba(148, 163, 184, 0.35) !important;
-  color: #ffffff !important;
 }
 
 div[data-baseweb="select"] span,
 div[data-baseweb="select"] input,
 div[data-baseweb="select"] div {
   color: #ffffff !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
   -webkit-text-fill-color: #ffffff !important;
 }
 
 div[data-baseweb="popover"] {
-  color: #0f172a !important;
+  background: #ffffff !important;
+  color: #111111 !important;
 }
 
-div[data-baseweb="popover"] ul[role="listbox"] {
+ul[role="listbox"] {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 0.55rem !important;
   box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22) !important;
 }
 
-ul[role="listbox"] li {
+ul[role="listbox"] li,
+ul[role="listbox"] li span {
   background: #ffffff !important;
-  color: #0f172a !important;
+  color: #111111 !important;
+  opacity: 1 !important;
+  font-weight: 500 !important;
 }
 
 ul[role="listbox"] li:hover {
-  background: #f1f5f9 !important;
-  color: #0f172a !important;
+  background: #f1f3f6 !important;
+  color: #000000 !important;
 }
 
-ul[role="listbox"] li[aria-selected="true"] {
-  background: #dbeafe !important;
-  color: #0f172a !important;
+ul[role="listbox"] li[aria-selected="true"],
+li[aria-selected="true"] {
+  background: #e6f0ff !important;
+  color: #000000 !important;
+  opacity: 1 !important;
+}
+
+li[aria-disabled="true"] {
+  opacity: 1 !important;
+  color: #999999 !important;
 }
 
 /* Text/input guard rails for Streamlit theme overrides */
