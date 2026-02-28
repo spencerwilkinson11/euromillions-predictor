@@ -253,8 +253,8 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-  padding-top: 0.6rem;
-  padding-bottom: 1rem;
+  padding-top: 0.55rem;
+  padding-bottom: 1.0rem;
 }
 
 h1, h2, h3, h4,
@@ -282,26 +282,25 @@ hr,
 
 .app-header {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin: 0 0 0.35rem;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 0.4rem 0;
 }
 
 .app-logo {
-  width: 3.2rem;
-  height: 3.2rem;
-  border-radius: 0.95rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: 0.04em;
   color: #f8fafc;
   background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #06b6d4 100%);
   border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow: 0 16px 30px rgba(15, 23, 42, 0.45);
-  margin-top: 0.05rem;
+  box-shadow: 0 5px 14px rgba(59,130,246,0.35);
 }
 
 .app-header-copy {
@@ -310,10 +309,10 @@ hr,
 }
 
 .app-title {
+  line-height: 1.08;
   margin: 0;
   font-size: clamp(1.55rem, 2.1vw, 2.15rem);
   font-weight: 800;
-  line-height: 1.1;
   background: linear-gradient(90deg, #e2e8f0 0%, #93c5fd 40%, #a5b4fc 75%, #67e8f9 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -321,14 +320,14 @@ hr,
 }
 
 .app-subtitle {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.95rem;
+  margin-top: 2px;
+  font-size: 0.85rem;
   line-height: 1.2;
+  color: rgba(255,255,255,0.72);
 }
 
 .last-result-banner {
-  margin: 0.45rem 0 1rem;
+  margin: 0.4rem 0 1rem;
   border-radius: 1.1rem;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background:
