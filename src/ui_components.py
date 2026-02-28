@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import datetime
+
+from src.date_utils import format_uk_date
 from html import escape
 
 import streamlit as st
@@ -17,20 +18,7 @@ def _format_draw_date(value: object) -> str:
     if not value:
         return "Date unavailable"
 
-    raw = str(value).strip()
-    parsed: datetime | None = None
-
-    try:
-        parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
-    except ValueError:
-        for pattern in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
-            try:
-                parsed = datetime.strptime(raw, pattern)
-                break
-            except ValueError:
-                continue
-
-    return parsed.strftime("%d %b %Y") if parsed else raw
+    return format_uk_date(value)
 
 
 def _format_jackpot(value: object) -> str | None:
@@ -146,7 +134,8 @@ def render_jackpot_card(
 
     meta = ""
     if next_draw_day or next_draw_date:
-        meta = f"<div class='jackpot-meta'>{escape(str(next_draw_day or ''))} {escape(str(next_draw_date or ''))}</div>"
+        formatted_draw_date = format_uk_date(next_draw_date) if next_draw_date else ""
+        meta = f"<div class='jackpot-meta'>{escape(str(next_draw_day or ''))} {escape(str(formatted_draw_date or ''))}</div>"
 
     return (
         f'<div class="jackpot-card">'

@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from html import escape
 from typing import Callable
 import json
@@ -10,6 +10,7 @@ import requests
 import streamlit as st
 
 from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
+from src.date_utils import format_uk_date
 from src.jackpot_service import get_live_jackpot
 from src.strategies import STRATEGIES, build_line, explain_line
 from src import ui_components
@@ -161,29 +162,43 @@ def prepare_draws(draws: list[dict] | None, history_n: int) -> list[dict]:
     return ordered[:history_n]
 
 
-def format_uk_date(date_str: str | None) -> str:
-    if not date_str:
-        return "Date unavailable"
-
-    value = str(date_str).strip()
-    try:
-        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return dt.strftime("%d %b %Y")
-    except ValueError:
-        for pattern in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
-            try:
-                return datetime.strptime(value, pattern).strftime("%d %b %Y")
-            except ValueError:
-                continue
-    return value
-
-
 def _draw_date_text(draw: dict) -> str:
     for key in ("date", "drawDate", "draw_date"):
         value = draw.get(key)
         if value not in (None, ""):
             return str(value)
     return ""
+
+
+def _as_iso_date(value: object) -> str | None:
+    if value in (None, ""):
+        return None
+
+    try:
+        if isinstance(value, datetime):
+            return value.date().isoformat()
+        if isinstance(value, date):
+            return value.isoformat()
+        return datetime.fromisoformat(str(value).strip().replace("Z", "+00:00")).date().isoformat()
+    except (TypeError, ValueError):
+        return None
+
+
+def upcoming_draw_dates(seed_iso: str | None, count: int = 6) -> list[date]:
+    draw_days = {1, 4}  # Tuesday, Friday
+    base_date = datetime.now(timezone.utc).date()
+    parsed_seed = _as_iso_date(seed_iso)
+    if parsed_seed:
+        base_date = date.fromisoformat(parsed_seed)
+
+    cursor = base_date
+    draw_dates: list[date] = []
+    while len(draw_dates) < count:
+        if cursor.weekday() in draw_days and cursor not in draw_dates:
+            draw_dates.append(cursor)
+        cursor += timedelta(days=1)
+
+    return draw_dates
 
 
 
@@ -212,10 +227,12 @@ def _safe_ticket_lines(lines: list[dict] | None) -> list[dict]:
 
 
 def _new_ticket(lines: list[dict], strategy: str) -> dict:
+    default_draw_date = datetime.now(timezone.utc).date().isoformat()
     return {
         "id": str(uuid.uuid4()),
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "draw_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "draw_date": default_draw_date,
+        "draw_label": format_uk_date(default_draw_date),
         "strategy": strategy,
         "lines": _safe_ticket_lines(lines),
         "status": "Pending",
@@ -257,14 +274,28 @@ def render_your_tickets_section(most_recent_draw: dict | None) -> None:
         return
 
     recent_tickets = list(reversed(tickets[-3:]))
-    winning_mains = set(int(value) for value in (most_recent_draw or {}).get("numbers", []) if isinstance(value, int))
-    winning_stars = set(int(value) for value in (most_recent_draw or {}).get("stars", []) if isinstance(value, int))
+    last_result_date_iso = _as_iso_date(_draw_date_text(most_recent_draw or {}))
 
     for ticket in recent_tickets:
         created_at = format_uk_date(ticket.get("created_at"))
         strategy = escape(str(ticket.get("strategy", "Unknown strategy")))
+        draw_date_iso = _as_iso_date(ticket.get("draw_date"))
+        draw_label = ticket.get("draw_label") or format_uk_date(draw_date_iso)
         lines = _safe_ticket_lines(ticket.get("lines", []))[:5]
-        st.markdown(f"**{strategy}** · {created_at}")
+        draw_matches_latest = bool(last_result_date_iso and draw_date_iso == last_result_date_iso)
+
+        winning_mains = (
+            set(int(value) for value in (most_recent_draw or {}).get("numbers", []) if isinstance(value, int))
+            if draw_matches_latest
+            else set()
+        )
+        winning_stars = (
+            set(int(value) for value in (most_recent_draw or {}).get("stars", []) if isinstance(value, int))
+            if draw_matches_latest
+            else set()
+        )
+
+        st.markdown(f"**{strategy}** · {draw_label} · Created {created_at}")
         lines_markup = "".join(
             [_render_ticket_line_with_matches(line, winning_mains=winning_mains, winning_stars=winning_stars) for line in lines]
         )
@@ -282,6 +313,9 @@ def _ensure_ticket_state() -> None:
 
     if "last_generated_lines" not in st.session_state:
         st.session_state["last_generated_lines"] = None
+
+    if "last_generated_meta" not in st.session_state:
+        st.session_state["last_generated_meta"] = {}
 
     if "page" not in st.session_state:
         st.session_state["page"] = "Picks"
@@ -433,9 +467,21 @@ jackpot_amount = jackpot_amount or "Jackpot unavailable"
 
 jackpot_html = ui_components.render_jackpot_card(
     jackpot_amount=jackpot_amount,
-    next_draw_date=format_uk_date(meta.next_draw_date) if meta.ok else None,
-    next_draw_day=meta.next_draw_day if meta.ok else None,
+    next_draw_date=meta.next_draw_date if meta.ok else None,
+    next_draw_day=None,
 )
+
+draw_dates = upcoming_draw_dates(meta.next_draw_date if meta.ok else None)
+draw_options = [{"label": format_uk_date(d), "value": d.isoformat()} for d in draw_dates]
+selected_iso = st.session_state.get("selected_draw_date")
+option_values = [option["value"] for option in draw_options]
+if selected_iso not in option_values:
+    selected_iso = draw_options[0]["value"] if draw_options else datetime.now(timezone.utc).date().isoformat()
+
+draw_option_map = {option["label"]: option["value"] for option in draw_options}
+selected_label = next((option["label"] for option in draw_options if option["value"] == selected_iso), format_uk_date(selected_iso))
+st.session_state["selected_draw_date"] = selected_iso
+st.session_state["selected_draw_label"] = selected_label
 
 if st.sidebar.checkbox("Debug jackpot source"):
     st.sidebar.write(meta)
@@ -479,6 +525,14 @@ if st.session_state["page"] == "Picks":
 
     with left:
         st.subheader("Controls")
+        selected_draw_label = st.selectbox(
+            "Draw date",
+            options=list(draw_option_map.keys()),
+            index=list(draw_option_map.values()).index(st.session_state["selected_draw_date"]),
+        )
+        st.session_state["selected_draw_label"] = selected_draw_label
+        st.session_state["selected_draw_date"] = draw_option_map[selected_draw_label]
+
         strategy = st.selectbox("Strategy", STRATEGIES, index=0)
         line_count = st.slider("Number of lines", min_value=1, max_value=10, value=4)
         max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=250, step=50)
@@ -500,7 +554,9 @@ if st.session_state["page"] == "Picks":
                     lines=last_generated.get("lines", []),
                     strategy=last_generated.get("strategy", "Balanced Mix"),
                 )
-                ticket["draw_date"] = last_generated.get("next_draw_date") or ticket["draw_date"]
+                saved_draw_iso = last_generated.get("draw_date") or ticket["draw_date"]
+                ticket["draw_date"] = saved_draw_iso
+                ticket["draw_label"] = last_generated.get("draw_label") or format_uk_date(saved_draw_iso)
                 st.session_state["tickets"].append(ticket)
                 _persist_tickets()
                 st.success("Ticket saved.")
@@ -570,12 +626,20 @@ if st.session_state["page"] == "Picks":
             st.session_state["last_generated_lines"] = {
                 "lines": generated_lines,
                 "strategy": strategy,
-                "next_draw_date": meta.next_draw_date,
+                "draw_date": st.session_state["selected_draw_date"],
+                "draw_label": st.session_state["selected_draw_label"],
                 "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            st.session_state["last_generated_meta"] = {
+                "draw_date": st.session_state["selected_draw_date"],
+                "draw_label": st.session_state["selected_draw_label"],
+                "strategy": strategy,
+                "line_count": line_count,
             }
             if st.button("Save generated lines as ticket 🎟️", use_container_width=True, type="secondary"):
                 ticket = _new_ticket(lines=generated_lines, strategy=strategy)
-                ticket["draw_date"] = meta.next_draw_date or ticket["draw_date"]
+                ticket["draw_date"] = st.session_state["selected_draw_date"]
+                ticket["draw_label"] = st.session_state["selected_draw_label"]
                 st.session_state["tickets"].append(ticket)
                 _persist_tickets()
                 st.success("Ticket saved.")
@@ -620,7 +684,9 @@ else:
 
         for index, ticket in enumerate(reversed(tickets), start=1):
             created_at = format_uk_date(ticket.get("created_at"))
-            with st.expander(f"Ticket {index} • {ticket.get('strategy', 'Unknown strategy')} • {created_at}"):
+            ticket_draw_label = ticket.get("draw_label") or format_uk_date(ticket.get("draw_date"))
+            with st.expander(f"Ticket {index} • {ticket.get('strategy', 'Unknown strategy')} • {ticket_draw_label}"):
+                st.caption(f"Created: {created_at}")
                 st.write(f"Status: {ticket.get('status', 'Pending')}")
                 lines = _safe_ticket_lines(ticket.get("lines", []))
                 for line_idx, line in enumerate(lines, start=1):
