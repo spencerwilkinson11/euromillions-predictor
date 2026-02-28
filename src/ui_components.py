@@ -82,8 +82,7 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
     if draw_no not in (None, ""):
         draw_url = f"{draw_url}/draw-details?drawNo={draw_no}"
 
-    numbers_markup = "".join([f'<span class="premium-ball">{value}</span>' for value in main_numbers])
-    stars_markup = "".join([f'<span class="premium-ball premium-star"><span>{value}</span></span>' for value in lucky_stars])
+    balls_markup = render_number_balls(main_numbers, lucky_stars, show_plus=False)
 
     draw_meta = ""
     if draw_no not in (None, ""):
@@ -101,10 +100,7 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
         f'<div class="last-result-brand">{safe_brand_text}</div>'
         f'<h2>Last result</h2>'
         f'<p class="last-result-date">{_format_draw_date(draw_date)}</p>'
-        f'<div class="last-result-balls" aria-label="Latest winning numbers and lucky stars">'
-        f'<div class="last-result-ball-row">{numbers_markup}</div>'
-        f'<div class="last-result-stars-row">{stars_markup}</div>'
-        f'</div>'
+        f'{balls_markup}'
         f'{meta_row_markup}'
         f'</div>'
         f'<div class="last-result-right">'
@@ -160,18 +156,42 @@ def render_app_header(app_name: str = "Wilkos LuckyLogic", tagline: str = "Smart
 
 
 def render_balls(main_nums: list[int], stars: list[int]) -> None:
-    main_markup = "".join([f'<span class="ball">{value}</span>' for value in main_nums])
-    star_markup = "".join([f'<span class="ball star">{value}</span>' for value in stars])
-
     st.markdown(
-        f"""
-        <div class="ball-set" aria-label="Main numbers and lucky stars">
-            <div class="ball-group" role="list" aria-label="Main numbers">{main_markup}</div>
-            <div class="ball-divider">+</div>
-            <div class="ball-group" role="list" aria-label="Lucky stars">{star_markup}</div>
-        </div>
-        """,
+        render_number_balls(main_nums, stars),
         unsafe_allow_html=True,
+    )
+
+
+def render_number_balls(
+    mains: list[int],
+    stars: list[int] | None = None,
+    matched_mains: set[int] | None = None,
+    matched_stars: set[int] | None = None,
+    show_plus: bool = True,
+) -> str:
+    matched_mains = matched_mains or set()
+    matched_stars = matched_stars or set()
+
+    main_markup = "".join(
+        [
+            f'<span class="premium-ball{" matched" if int(value) in matched_mains else ""}">{int(value)}</span>'
+            for value in mains
+        ]
+    )
+    stars_markup = "".join(
+        [
+            f'<span class="premium-ball premium-star{" matched" if int(value) in matched_stars else ""}"><span>{int(value)}</span></span>'
+            for value in (stars or [])
+        ]
+    )
+    divider_markup = '<div class="number-ball-divider">+</div>' if show_plus and stars_markup else ""
+
+    return (
+        '<div class="number-ball-set" aria-label="Main numbers and lucky stars">'
+        f'<div class="number-ball-row" role="list" aria-label="Main numbers">{main_markup}</div>'
+        f'{divider_markup}'
+        f'<div class="number-ball-row" role="list" aria-label="Lucky stars">{stars_markup}</div>'
+        '</div>'
     )
 
 
@@ -197,8 +217,7 @@ def render_result_card(
     safe_confidence = max(0, min(100, int(confidence)))
     index = max(1, int(line_index))
 
-    main_markup = "".join([f'<span class="premium-ball em-ball em-ball-main">{int(value)}</span>' for value in main_nums])
-    stars_markup = "".join([f'<span class="premium-ball premium-star em-ball em-ball-star"><span>{int(value)}</span></span>' for value in stars])
+    balls_markup = render_number_balls(main_nums, stars, show_plus=False)
 
     strategy_label: str | None = None
     display_reasons: list[str] = []
@@ -223,10 +242,7 @@ def render_result_card(
             <div class="em-card-title">Line {index}</div>
             <span class="em-badge" aria-label="Confidence {safe_confidence} out of 100">{safe_confidence}/100</span>
         </div>
-        <div class="em-balls" aria-label="Main numbers and lucky stars">
-            <div class="em-balls-main">{main_markup}</div>
-            <div class="em-balls-stars">{stars_markup}</div>
-        </div>
+        {balls_markup}
         <div class="em-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{safe_confidence}" aria-label="Confidence {safe_confidence} out of 100">
             <span class="em-meter-fill" style="width: {safe_confidence}%;"></span>
         </div>
@@ -401,18 +417,22 @@ hr,
   color: var(--muted);
 }
 
-.last-result-balls {
+.number-ball-set {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.45rem;
   flex-wrap: wrap;
 }
 
-.last-result-ball-row,
-.last-result-stars-row {
+.number-ball-row {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+}
+
+.number-ball-divider {
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .premium-ball {
@@ -685,41 +705,6 @@ hr,
   line-height: 1.45;
 }
 
-.ball-set {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin: 0.25rem 0 0.65rem;
-  flex-wrap: wrap;
-}
-
-.ball-group {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.ball-divider {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.ball {
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: #ffffff;
-  background: linear-gradient(180deg, #60a5fa, #1d4ed8);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.35);
-}
-
 .em-results {
   display: grid;
   gap: 0.75rem;
@@ -766,26 +751,6 @@ hr,
   background: rgba(15, 23, 42, 0.58);
   font-weight: 700;
   font-size: 0.8rem;
-}
-
-.em-balls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.em-balls-main,
-.em-balls-stars {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-}
-
-.em-ball {
-  width: 2rem;
-  height: 2rem;
-  font-size: 0.85rem;
 }
 
 .em-meter {
@@ -839,17 +804,9 @@ hr,
   }
 }
 
-.ball.star {
-  background: linear-gradient(180deg, #fde68a, #f59e0b);
-  color: #1f2937;
-  border-radius: 0.5rem;
-  clip-path: polygon(50% 0%, 62% 35%, 100% 35%, 69% 57%, 82% 100%, 50% 72%, 18% 100%, 31% 57%, 0% 35%, 38% 35%);
-  border: 1px solid rgba(180, 83, 9, 0.5);
-}
-
-.ball.matched {
+.premium-ball.matched {
   outline: 3px solid #FFD700;
-  box-shadow: 0 0 0 2px rgba(255,215,0,0.35), 0 6px 16px rgba(2, 6, 23, 0.35);
+  box-shadow: 0 0 0 2px rgba(255,215,0,0.35);
 }
 
 .ticket-match-list {
@@ -869,12 +826,7 @@ hr,
   padding: 0.6rem;
 }
 
-.ticket-line-balls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
+.ticket-line-balls { margin: 0; }
 
 .match-count-badge {
   width: 2.8rem;
@@ -1069,13 +1021,13 @@ div[data-baseweb="button-group"] button[aria-selected="false"] {
     font-size: 1.05rem;
   }
 
-  .ball {
+  .premium-ball {
     width: 2rem;
     height: 2rem;
     font-size: 0.88rem;
   }
 
-  .ball-set {
+  .number-ball-set {
     gap: 0.45rem;
   }
 
