@@ -39,6 +39,19 @@ def overdue_gaps(draws: list[dict]) -> tuple[dict[int, int], dict[int, int]]:
     main_gap = {n: default_gap for n in MAIN_RANGE}
     star_gap = {s: default_gap for s in STAR_RANGE}
 
+    def coerce_in_range(value: object, valid_range: range) -> int | None:
+        if value is None:
+            return None
+
+        try:
+            int_value = int(value)
+        except (TypeError, ValueError):
+            return None
+
+        if int_value not in valid_range:
+            return None
+        return int_value
+
     def sort_key(draw: dict) -> tuple[int, str]:
         """Sort by draw date descending when available, otherwise preserve order."""
         for key in ("date", "drawDate", "draw_date"):
@@ -51,20 +64,17 @@ def overdue_gaps(draws: list[dict]) -> tuple[dict[int, int], dict[int, int]]:
 
     for idx, draw in enumerate(ordered_draws):
         for n in draw.get("numbers", []):
-            if n in main_gap and main_gap[n] == default_gap:
-                main_gap[n] = idx
+            n_int = coerce_in_range(n, range(1, 51))
+            if n_int is None:
+                continue
+            if main_gap.get(n_int, default_gap) == default_gap:
+                main_gap[n_int] = idx
         for s in draw.get("stars", []):
-            if s in star_gap and star_gap[s] == default_gap:
-    main_gap = {n: len(draws) + 1 for n in MAIN_RANGE}
-    star_gap = {s: len(draws) + 1 for s in STAR_RANGE}
-
-    for idx, draw in enumerate(draws):
-        for n in draw.get("numbers", []):
-            if main_gap[n] > len(draws):
-                main_gap[n] = idx
-        for s in draw.get("stars", []):
-            if star_gap[s] > len(draws):
-                star_gap[s] = idx
+            s_int = coerce_in_range(s, range(1, 13))
+            if s_int is None:
+                continue
+            if star_gap.get(s_int, default_gap) == default_gap:
+                star_gap[s_int] = idx
 
     return main_gap, star_gap
 
