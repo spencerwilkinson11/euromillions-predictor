@@ -931,40 +931,79 @@ div[data-testid="stExpander"] summary {
   color: #ffffff !important;
 }
 
-/* Navigation tabs (Picks / Insights / Tickets): dark base + red active border */
-div[role="radiogroup"],
-div[data-baseweb="button-group"] {
+/* ---------- NAV: Segmented control ---------- */
+div[data-testid="stSegmentedControl"],
+div[data-testid="stSegmentedControl"] > div,
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] {
+  background: transparent !important;
+}
+
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] {
   gap: 0.45rem;
 }
 
-div[role="radiogroup"] label,
-div[data-baseweb="button-group"] button {
+div[data-testid="stSegmentedControl"] button,
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button {
   background: #0b1b2b !important;
-  color: #f8fafc !important;
+  color: #ffffff !important;
   border: 2px solid transparent !important;
-  border-radius: 0.55rem !important;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
 }
 
-div[role="radiogroup"] label:hover,
-div[data-baseweb="button-group"] button:hover {
+/* keep dark on hover */
+div[data-testid="stSegmentedControl"] button:hover,
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button:hover {
   background: #0b1b2b !important;
-  color: #f8fafc !important;
-  opacity: 0.88;
-}
-
-div[role="radiogroup"] input:checked + div,
-div[role="radiogroup"] label[data-checked="true"],
-div[data-baseweb="button-group"] button[aria-selected="true"] {
-  background: #0b1b2b !important;
-  border: 2px solid #ff4b4b !important;
-  box-shadow: 0 0 0 1px rgba(255, 75, 75, 0.2), 0 0 14px rgba(255, 75, 75, 0.16);
   color: #ffffff !important;
 }
 
-div[role="radiogroup"] input:not(:checked) + div,
-div[data-baseweb="button-group"] button[aria-selected="false"] {
+/* active item gets red border */
+div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
+div[data-testid="stSegmentedControl"] [aria-selected="true"] {
+  border: 2px solid #ff4b4b !important;
+  background: #0b1b2b !important;
+  color: #ffffff !important;
+}
+
+/* ---------- NAV: Radio fallback (horizontal) ---------- */
+div[role="radiogroup"],
+div[role="radiogroup"] > div {
+  background: transparent !important;
+}
+
+div[role="radiogroup"] label,
+div[role="radiogroup"] label > div {
+  background: #0b1b2b !important;
+  color: #ffffff !important;
   border: 2px solid transparent !important;
+  border-radius: 10px !important;
+  padding: 8px 16px !important;
+}
+
+/* keep dark on hover */
+div[role="radiogroup"] label:hover,
+div[role="radiogroup"] label:hover > div {
+  background: #0b1b2b !important;
+  color: #ffffff !important;
+}
+
+/* active gets red border (radio DOM varies; cover both patterns) */
+div[role="radiogroup"] input:checked + div,
+div[role="radiogroup"] input:checked + label,
+div[role="radiogroup"] label[data-checked="true"],
+div[role="radiogroup"] label[data-checked="true"] > div {
+  border: 2px solid #ff4b4b !important;
+  background: #0b1b2b !important;
+  color: #ffffff !important;
+}
+
+/* remove any default focus/grey effects */
+div[data-testid="stSegmentedControl"] button:focus,
+div[role="radiogroup"] label:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 @media (max-width: 640px) {
