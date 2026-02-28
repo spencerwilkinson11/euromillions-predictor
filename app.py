@@ -1,10 +1,14 @@
-import random
 from collections import Counter
 
+import pandas as pd
 import requests
 import streamlit as st
 
-st.set_page_config(page_title="EuroMillions Generator", layout="centered")
+from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
+from src.strategies import STRATEGIES, build_line, explain_line
+from src.ui_components import app_styles, render_balls, render_insight_card
+
+st.set_page_config(page_title="EuroMillions AI Decision Engine", layout="wide")
 
 
 @st.cache_data(ttl=60 * 60)
@@ -16,204 +20,53 @@ def fetch_draws():
     return response.json()
 
 
-def weighted_unique_pick(pool_counter, k):
-    """Pick k unique values, weighted by frequency."""
-    remaining = dict(pool_counter)
-    picked = []
+@st.cache_data(show_spinner=False)
+def compute_insights(draws: list[dict], topn: int = 5):
+    main_counter, star_counter = frequency_counter(draws)
+    main_gap, star_gap = overdue_gaps(draws)
 
-    for _ in range(min(k, len(remaining))):
-        choices = list(remaining.keys())
-        weights = list(remaining.values())
-        selected = random.choices(choices, weights=weights, k=1)[0]
-        picked.append(selected)
-        remaining.pop(selected)
-
-    return sorted(picked)
-
-
-def random_unique_pick(values, k):
-    return sorted(random.sample(sorted(set(values)), k=min(k, len(set(values)))))
-
-
-def generate_line(draws, weighted=True):
-    numbers, stars = [], []
-    for draw in draws:
-        numbers.extend(draw["numbers"])
-        stars.extend(draw["stars"])
-
-    if weighted:
-        main_nums = weighted_unique_pick(Counter(numbers), 5)
-        lucky_stars = weighted_unique_pick(Counter(stars), 2)
-    else:
-        main_nums = random_unique_pick(numbers, 5)
-        lucky_stars = random_unique_pick(stars, 2)
-
-    return main_nums, lucky_stars, Counter(numbers), Counter(stars)
-
-
-def render_balls(values, class_name):
-    balls = "".join([f'<span class="{class_name}">{v}</span>' for v in values])
-    st.markdown(f'<div class="ball-row">{balls}</div>', unsafe_allow_html=True)
-
-
-st.markdown(
-    """
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-
-html, body, [class*="css"]  {font-family: 'Inter', sans-serif;}
-
-.stApp {
-    background:
-      radial-gradient(circle at 10% 10%, rgba(56, 189, 248, 0.18), transparent 30%),
-      radial-gradient(circle at 85% 25%, rgba(59, 130, 246, 0.12), transparent 30%),
-      linear-gradient(180deg, #0f172a 0%, #111827 100%);
-    color: #f8fafc;
-}
-
-.block-container {
-    max-width: 430px;
-    padding-top: 1.2rem;
-    padding-bottom: 1.6rem;
-}
-
-[data-testid="stAppViewContainer"] {
-    display: flex;
-    justify-content: center;
-}
-
-[data-testid="stAppViewContainer"] > .main {
-    max-width: 470px;
-    width: 100%;
-    margin: 0 auto;
-}
-
-.main .block-container {
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.88), rgba(15, 23, 42, 0.7));
-    border: 1px solid rgba(148, 163, 184, 0.26);
-    border-radius: 2.1rem;
-    box-shadow: 0 24px 52px rgba(2, 6, 23, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.09);
-    padding-left: 1.05rem;
-    padding-right: 1.05rem;
-    position: relative;
-}
-
-.main .block-container::before {
-    content: "";
-    position: absolute;
-    top: 0.55rem;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 6rem;
-    height: 0.35rem;
-    border-radius: 999px;
-    background: rgba(148, 163, 184, 0.35);
-}
-
-[data-testid="stVerticalBlockBorderWrapper"] {
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(15, 23, 42, 0.65));
-    border: 1px solid rgba(148, 163, 184, 0.18);
-    border-radius: 1rem;
-    padding: 0.9rem;
-}
-
-.hero {margin-bottom: 1rem;}
-.hero h1 {font-size: 1.75rem; margin-bottom: 0.3rem;}
-.hero p {color: #e2e8f0; margin: 0; font-size: 0.96rem;}
-
-h1, h2, h3, p, label, li, span, div, small {
-    color: #f8fafc;
-}
-
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] li,
-[data-testid="stCaptionContainer"],
-[data-testid="stRadio"] label,
-[data-testid="stSlider"] label,
-[data-testid="stWidgetLabel"],
-[data-testid="stMetricLabel"],
-[data-testid="stMetricValue"] {
-    color: #f8fafc !important;
-}
-
-[data-testid="stMetric"] {
-    border-radius: 0.85rem;
-    border: 1px solid rgba(148, 163, 184, 0.2);
-    background: rgba(15, 23, 42, 0.7);
-    padding: 0.55rem;
-}
-
-.line-title {
-    font-weight: 700;
-    margin-top: 0.65rem;
-    margin-bottom: 0.25rem;
-    color: #f8fafc;
-}
-
-.ball-row {display:flex; gap:0.5rem; margin:0.2rem 0 0.7rem 0; flex-wrap:wrap;}
-.main-ball, .star-ball {
-    width:2.35rem;
-    height:2.35rem;
-    border-radius:999px;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    font-weight:800;
-    font-size: 0.95rem;
-    color:#fff;
-    box-shadow:0 8px 16px rgba(2,6,23,0.35);
-}
-.main-ball {
-    background: linear-gradient(180deg,#60a5fa,#1d4ed8);
-    border: 1px solid rgba(255,255,255,0.26);
-}
-.star-ball {
-    background: linear-gradient(180deg,#fbbf24,#d97706);
-    border: 1px solid rgba(255,255,255,0.24);
-}
-
-.disclaimer {
-    border-radius: 0.8rem;
-    border: 1px solid rgba(148, 163, 184, 0.22);
-    background: rgba(15, 23, 42, 0.7);
-    padding: 0.8rem;
-    font-size: 0.9rem;
-}
-
-@media (max-width: 640px) {
-    .main .block-container {
-        border-radius: 1.55rem;
+    return {
+        "main_counter": main_counter,
+        "star_counter": star_counter,
+        "main_gap": main_gap,
+        "star_gap": star_gap,
+        "hot_main": top_n(main_counter, topn, reverse=True),
+        "hot_star": top_n(star_counter, min(topn, 3), reverse=True),
+        "cold_main": top_n(main_counter, topn, reverse=False),
+        "cold_star": top_n(star_counter, min(topn, 3), reverse=False),
+        "overdue_main": [n for n, _ in sorted(main_gap.items(), key=lambda item: item[1], reverse=True)[:topn]],
+        "overdue_star": [s for s, _ in sorted(star_gap.items(), key=lambda item: item[1], reverse=True)[: min(topn, 3)]],
+        "recent": recent_draw_summary(draws),
     }
-}
-</style>
-""",
-    unsafe_allow_html=True,
-)
 
+
+st.markdown(app_styles(), unsafe_allow_html=True)
 st.markdown(
     """
 <div class="hero">
-  <h1>🎰 EuroMillions Generator</h1>
-  <p>Smart, clean number picks inspired by historical draws.</p>
+  <h1>🎰 EuroMillions AI Decision Engine</h1>
+  <p>AI-assisted number ideas based on historical draws.</p>
 </div>
 """,
     unsafe_allow_html=True,
 )
 
-with st.container(border=True):
-    st.subheader("Create your play lines")
-    pick_mode = st.radio("Pick mode", ["Weighted by history", "Pure random"], index=0, horizontal=True)
-    line_count = st.slider("Number of lines", min_value=1, max_value=10, value=3)
-    max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=200, step=50)
-    generate = st.button("Generate Numbers 🎯", use_container_width=True, type="primary")
+left, main = st.columns([1, 2], gap="large")
 
-with st.container(border=True):
-    st.caption("How it works")
-    st.markdown(
-        "- **Weighted mode**: numbers that appeared more often get higher chance.\n"
-        "- **Pure random mode**: all seen numbers are equally likely.\n"
-        "- Every line contains **5 numbers + 2 stars**."
-    )
+with left:
+    st.subheader("Controls")
+    strategy = st.selectbox("Strategy", STRATEGIES, index=0)
+    line_count = st.slider("Number of lines", min_value=1, max_value=10, value=4)
+    max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=250, step=50)
+    topn = st.slider("Insight depth (Top N)", min_value=3, max_value=10, value=5)
+    generate = st.button("Generate Decision Lines 🎯", use_container_width=True, type="primary")
+
+    st.caption("Optional filters")
+    include_last_draw = st.checkbox("Allow numbers from most recent draw", value=True)
+
+with main:
+    st.subheader("Generated Lines + Rationale")
+    st.write("Select a strategy and generate lines to view confidence scoring and reasoning.")
 
 if generate:
     try:
@@ -222,37 +75,86 @@ if generate:
     except requests.RequestException as exc:
         st.error("Could not fetch draw data right now. Please try again in a moment.")
         st.caption(f"Technical details: {exc}")
-    else:
-        draws = all_draws[:max_draws]
-        weighted = pick_mode == "Weighted by history"
+        st.stop()
 
-        if not draws:
-            st.warning("No draw data available from the API.")
-        else:
-            preview_nums, preview_stars, num_counter, star_counter = generate_line(draws, weighted=weighted)
+    draws = all_draws[:max_draws]
+    if not draws:
+        st.warning("No draw data available from the API.")
+        st.stop()
 
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Draws loaded", len(draws))
-            c2.metric("Most frequent number", num_counter.most_common(1)[0][0])
-            c3.metric("Most frequent star", star_counter.most_common(1)[0][0])
+    insights = compute_insights(draws, topn=topn)
+    main_counter: Counter = insights["main_counter"]
+    star_counter: Counter = insights["star_counter"]
 
-            st.divider()
-            st.subheader("Your Lines")
+    last_draw_numbers = set(insights["recent"]["numbers"])
 
-            # First line from preview so we can reuse computed counters for metrics.
-            st.markdown('<p class="line-title">Line 1</p>', unsafe_allow_html=True)
-            render_balls(preview_nums, "main-ball")
-            render_balls(preview_stars, "star-ball")
+    with main:
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Draws loaded", len(draws))
+        m2.metric("Most frequent main", main_counter.most_common(1)[0][0])
+        m3.metric("Most frequent star", star_counter.most_common(1)[0][0])
 
-            for idx in range(2, line_count + 1):
-                nums, stars, _, _ = generate_line(draws, weighted=weighted)
-                st.markdown(f'<p class="line-title">Line {idx}</p>', unsafe_allow_html=True)
+        for idx in range(1, line_count + 1):
+            nums, stars = build_line(strategy, main_counter, star_counter, draws)
+
+            if not include_last_draw:
+                attempts = 0
+                while set(nums).intersection(last_draw_numbers) and attempts < 10:
+                    nums, stars = build_line(strategy, main_counter, star_counter, draws)
+                    attempts += 1
+
+            score, explanation = explain_line(
+                nums,
+                stars,
+                main_counter=main_counter,
+                star_counter=star_counter,
+                main_gap=insights["main_gap"],
+                strategy=strategy,
+            )
+
+            with st.container(border=True):
+                st.markdown(f"**Line {idx}**")
                 render_balls(nums, "main-ball")
                 render_balls(stars, "star-ball")
+                st.progress(score / 100, text=f"Confidence: {score}/100")
+                for reason in explanation[:3]:
+                    st.markdown(f"- {reason}")
 
-            st.markdown(
-                '<div class="disclaimer"><strong>For entertainment only.</strong> '
-                'Lottery outcomes are random and not predictable.<br/>'
-                'Tip: generate a few batches and pick the line style you prefer.</div>',
-                unsafe_allow_html=True,
-            )
+        st.markdown(
+            '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.divider()
+    st.subheader("Insights")
+    i1, i2, i3, i4 = st.columns(4)
+
+    with i1:
+        render_insight_card(
+            "Hot numbers",
+            f"Main: {', '.join(map(str, insights['hot_main']))}<br/>Stars: {', '.join(map(str, insights['hot_star']))}",
+            "🔥",
+        )
+    with i2:
+        render_insight_card(
+            "Cold numbers",
+            f"Main: {', '.join(map(str, insights['cold_main']))}<br/>Stars: {', '.join(map(str, insights['cold_star']))}",
+            "❄️",
+        )
+    with i3:
+        render_insight_card(
+            "Overdue",
+            f"Main: {', '.join(map(str, insights['overdue_main']))}<br/>Stars: {', '.join(map(str, insights['overdue_star']))}",
+            "⏳",
+        )
+    with i4:
+        recent = insights["recent"]
+        render_insight_card(
+            "Most recent draw",
+            f"Date: {recent['date']}<br/>Numbers: {', '.join(map(str, recent['numbers']))}<br/>Stars: {', '.join(map(str, recent['stars']))}",
+            "🕒",
+        )
+
+    st.subheader("Top Main Number Frequency")
+    freq_df = pd.DataFrame(main_counter.most_common(10), columns=["Number", "Frequency"]).set_index("Number")
+    st.bar_chart(freq_df)
