@@ -7,7 +7,7 @@ import streamlit as st
 
 from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
 from src.strategies import STRATEGIES, build_line, explain_line
-from src.ui_components import app_styles, render_balls, render_insight_card
+from src.ui_components import app_styles, render_balls, render_insight_card, render_last_result_banner
 
 st.set_page_config(page_title="EuroMillions AI Decision Engine", layout="wide")
 
@@ -116,6 +116,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+try:
+    all_draws = fetch_draws()
+except requests.RequestException:
+    all_draws = []
+
+ordered_draws = prepare_draws(all_draws, len(all_draws) if all_draws else 0)
+most_recent = ordered_draws[0] if ordered_draws else None
+st.markdown(render_last_result_banner(most_recent), unsafe_allow_html=True)
+
 left, main = st.columns([1, 2], gap="large")
 
 with left:
@@ -134,13 +143,14 @@ with main:
     st.write("Select a strategy and generate lines to view confidence scoring and reasoning.")
 
 if generate:
-    try:
-        with st.spinner("Fetching latest draw history..."):
-            all_draws = fetch_draws()
-    except requests.RequestException as exc:
-        st.error("Could not fetch draw data right now. Please try again in a moment.")
-        st.caption(f"Technical details: {exc}")
-        st.stop()
+    with st.spinner("Fetching latest draw history..."):
+        if not all_draws:
+            try:
+                all_draws = fetch_draws()
+            except requests.RequestException as exc:
+                st.error("Could not fetch draw data right now. Please try again in a moment.")
+                st.caption(f"Technical details: {exc}")
+                st.stop()
 
     draws = prepare_draws(all_draws, max_draws)
     if not draws:
