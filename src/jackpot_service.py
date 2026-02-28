@@ -35,8 +35,13 @@ class JackpotInfo:
     error: Optional[str]
 
 
-def _format_gbp(amount: int) -> str:
-    return f"£{amount:,}"
+def format_jackpot_display(value: int) -> str:
+    if value >= 1_000_000:
+        millions = value / 1_000_000
+        if millions.is_integer():
+            return f"£{int(millions)} Million"
+        return f"£{millions:.1f} Million"
+    return f"£{value:,}"
 
 
 def _try_int(s: str) -> Optional[int]:
@@ -86,7 +91,7 @@ def fetch_from_national_lottery_xml() -> JackpotInfo:
         return JackpotInfo(
             True,
             "national_lottery_xml",
-            _format_gbp(amount),
+            format_jackpot_display(amount),
             (root.findtext(".//next-draw-date") or "").strip() or None,
             (root.findtext(".//next-draw-day") or "").strip().title() or None,
             jackpot_text,
@@ -130,10 +135,10 @@ def fetch_from_national_lottery_html() -> JackpotInfo:
             if amount:
                 break
 
-        if not amount:
+        if amount is None:
             return JackpotInfo(False, "national_lottery_html", None, None, None, None, "No parseable jackpot in HTML")
 
-        return JackpotInfo(True, "national_lottery_html", _format_gbp(amount), None, None, raw_match, None)
+        return JackpotInfo(True, "national_lottery_html", format_jackpot_display(amount), None, None, raw_match, None)
     except Exception as exc:
         return JackpotInfo(False, "national_lottery_html", None, None, None, body[:500], str(exc))
 
@@ -158,7 +163,7 @@ def fetch_from_pedro_api() -> JackpotInfo:
         if amount is None:
             return JackpotInfo(False, "pedro_api", None, None, None, jackpot_raw, "No parseable jackpot in fallback API")
 
-        return JackpotInfo(True, "pedro_api", _format_gbp(amount), None, None, jackpot_raw, None)
+        return JackpotInfo(True, "pedro_api", format_jackpot_display(amount), None, None, jackpot_raw, None)
     except Exception as exc:
         return JackpotInfo(False, "pedro_api", None, None, None, body[:500], str(exc))
 
