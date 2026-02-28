@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import datetime, timezone
+from typing import Callable
 
 import pandas as pd
 import requests
@@ -7,7 +8,56 @@ import streamlit as st
 
 from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
 from src.strategies import STRATEGIES, build_line, explain_line
-from src.ui_components import app_styles, render_insight_card, render_last_result_banner, render_result_card
+from src import ui_components
+
+
+def _resolve_ui_function(*names: str) -> Callable | None:
+    for name in names:
+        function = getattr(ui_components, name, None)
+        if callable(function):
+            return function
+    return None
+
+
+_app_styles = _resolve_ui_function("app_styles")
+_render_insight_card = _resolve_ui_function("render_insight_card")
+_render_last_result_banner = _resolve_ui_function("render_last_result_banner", "render_last_result")
+_render_result_card = _resolve_ui_function("render_result_card")
+
+
+def app_styles() -> str:
+    if _app_styles:
+        return _app_styles()
+    return ""
+
+
+def render_last_result_banner(draw: dict | None) -> str:
+    if _render_last_result_banner:
+        return _render_last_result_banner(draw)
+    return (
+        '<div class="last-result-banner"><div class="last-result-main"><h2>Last result</h2>'
+        "<p>No draw data available right now.</p></div></div>"
+    )
+
+
+def render_result_card(line_index: int, main_nums: list[int], stars: list[int], confidence: int, reasons: list[str]) -> str:
+    if _render_result_card:
+        return _render_result_card(line_index, main_nums, stars, confidence, reasons)
+
+    return (
+        f"<div><strong>Line {line_index}</strong> — "
+        f"Main: {', '.join(map(str, main_nums))} | Stars: {', '.join(map(str, stars))} | "
+        f"Confidence: {confidence}/100<br/>{'<br/>'.join(reasons)}</div>"
+    )
+
+
+def render_insight_card(title: str, body: str, icon: str = "") -> None:
+    if _render_insight_card:
+        _render_insight_card(title, body, icon)
+        return
+
+    st.markdown(f"**{icon} {title}**")
+    st.markdown(body, unsafe_allow_html=True)
 
 st.set_page_config(page_title="EuroMillions AI Decision Engine", layout="wide")
 
