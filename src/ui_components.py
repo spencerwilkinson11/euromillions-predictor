@@ -51,10 +51,6 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
             f'<p class="last-result-date">No draw data available right now.</p>'
             f'</div>'
             f'<div class="last-result-right">'
-            f'<div class="last-result-cta-panel">'
-            f'<div class="last-result-cta-title">Are you a winner?</div>'
-            f'<a class="last-result-cta-button" href="https://www.national-lottery.co.uk/results/euromillions" target="_blank" rel="noopener noreferrer">Check results</a>'
-            f'</div>'
             f'{jackpot_html}'
             f'</div>'
             f'</div>'
@@ -78,10 +74,6 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
     draw_date = _first_available(draw, ("date", "drawDate", "draw_date"))
     jackpot = _first_available(draw, ("jackpot", "jackpotAmount", "estimatedJackpot", "topPrize", "jackpot_amount"))
 
-    draw_url = "https://www.national-lottery.co.uk/results/euromillions"
-    if draw_no not in (None, ""):
-        draw_url = f"{draw_url}/draw-details?drawNo={draw_no}"
-
     balls_markup = render_number_balls(main_numbers, lucky_stars, show_plus=False)
 
     draw_meta = ""
@@ -104,10 +96,6 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
         f'{meta_row_markup}'
         f'</div>'
         f'<div class="last-result-right">'
-        f'<div class="last-result-cta-panel">'
-        f'<div class="last-result-cta-title">Are you a winner?</div>'
-        f'<a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>'
-        f'</div>'
         f'{jackpot_html}'
         f'</div>'
         f'</div>'
@@ -138,7 +126,7 @@ def render_jackpot_card(
         f'<div class="jackpot-brand">{escape(brand_text)}</div>'
         f'<div class="jackpot-amount">{amount}</div>'
         f'{meta}'
-        f'<a class="jackpot-cta" href="https://www.national-lottery.co.uk/results/euromillions" '
+        f'<a class="jackpot-cta play-button" href="https://www.national-lottery.co.uk/results/euromillions" '
         f'target="_blank" rel="noopener noreferrer">Play for £2.50</a>'
         f'</div>'
     )
@@ -324,10 +312,9 @@ a:visited:hover {
   background: transparent !important;
 }
 
-.last-result-cta-button:hover,
 .jackpot-cta:hover,
 .jackpot-play:hover {
-  color: #000000 !important;
+  color: #ffffff !important;
 }
 
 hr,
@@ -507,21 +494,6 @@ hr,
   letter-spacing: 0.08em;
 }
 
-.last-result-cta-panel {
-  min-width: 210px;
-  border: 1px solid rgba(148, 163, 184, 0.28);
-  border-radius: 0.9rem;
-  background: rgba(15, 23, 42, 0.55);
-  padding: 0.75rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 0.55rem;
-}
-
-
-
 .last-result-right {
   display: flex;
   flex-direction: column;
@@ -540,40 +512,9 @@ hr,
     align-items: stretch;
   }
 
-  .last-result-cta-panel {
-    width: 230px;
-  }
-
   .jackpot-card {
     width: 260px;
   }
-}
-
-.last-result-cta-title {
-  font-weight: 700;
-}
-
-.last-result-cta-button {
-  text-decoration: none;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0.48rem 0.9rem;
-  color: #0f172a;
-  background: linear-gradient(180deg, #fef08a, #fbbf24);
-  border: 1px solid rgba(255, 255, 255, 0.48);
-  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.3);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-  animation: ctaPulse 2.4s ease-in-out infinite;
-}
-
-.last-result-cta-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 13px 24px rgba(245, 158, 11, 0.45);
-}
-
-@keyframes ctaPulse {
-  0%, 100% { box-shadow: 0 8px 18px rgba(245, 158, 11, 0.3); }
-  50% { box-shadow: 0 12px 25px rgba(251, 191, 36, 0.4); }
 }
 
 
@@ -668,6 +609,23 @@ hr,
   padding: 12px 14px;
   box-shadow: 0 10px 24px rgba(11, 27, 140, 0.35);
   transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+/* Keep Play for £2.50 label legible regardless of nested markup rendering. */
+.play-button,
+.play-button button,
+.play-button button div,
+.play-button button p,
+.play-button span {
+  color: #ffffff !important;
+}
+
+.play-button:hover,
+.play-button button:hover,
+.play-button button:hover div,
+.play-button button:hover p,
+.play-button:hover span {
+  color: #ffffff !important;
 }
 
 .jackpot-play:hover,
@@ -1046,7 +1004,6 @@ div[data-baseweb="button-group"] button[aria-selected="false"] {
     width: 100%;
   }
 
-  .last-result-cta-panel,
   .jackpot-card {
     min-width: auto;
     width: 100%;
@@ -1055,7 +1012,6 @@ div[data-baseweb="button-group"] button[aria-selected="false"] {
 
 @media (prefers-reduced-motion: reduce) {
   .stApp,
-  .last-result-cta-button,
   .premium-ball,
   .premium-star,
   .em-card {
