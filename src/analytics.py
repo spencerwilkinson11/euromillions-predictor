@@ -55,6 +55,15 @@ def overdue_gaps(draws: list[dict]) -> tuple[dict[int, int], dict[int, int]]:
                 main_gap[n] = idx
         for s in draw.get("stars", []):
             if s in star_gap and star_gap[s] == default_gap:
+    main_gap = {n: len(draws) + 1 for n in MAIN_RANGE}
+    star_gap = {s: len(draws) + 1 for s in STAR_RANGE}
+
+    for idx, draw in enumerate(draws):
+        for n in draw.get("numbers", []):
+            if main_gap[n] > len(draws):
+                main_gap[n] = idx
+        for s in draw.get("stars", []):
+            if star_gap[s] > len(draws):
                 star_gap[s] = idx
 
     return main_gap, star_gap
