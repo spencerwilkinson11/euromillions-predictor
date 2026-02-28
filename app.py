@@ -495,7 +495,7 @@ if st.session_state["page"] == "Picks":
         last_generated = st.session_state.get("last_generated_lines")
         if last_generated and isinstance(last_generated.get("lines"), list):
             st.caption("Your last generated set is ready to save.")
-            if st.button("💾 Save as Ticket", use_container_width=True):
+            if st.button("💾 Save as Ticket", use_container_width=True, type="secondary"):
                 ticket = _new_ticket(
                     lines=last_generated.get("lines", []),
                     strategy=last_generated.get("strategy", "Balanced Mix"),
@@ -573,7 +573,7 @@ if st.session_state["page"] == "Picks":
                 "next_draw_date": meta.next_draw_date,
                 "generated_at": datetime.now(timezone.utc).isoformat(),
             }
-            if st.button("Save generated lines as ticket 🎟️", use_container_width=True):
+            if st.button("Save generated lines as ticket 🎟️", use_container_width=True, type="secondary"):
                 ticket = _new_ticket(lines=generated_lines, strategy=strategy)
                 ticket["draw_date"] = meta.next_draw_date or ticket["draw_date"]
                 st.session_state["tickets"].append(ticket)
