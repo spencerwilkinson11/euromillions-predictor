@@ -283,6 +283,67 @@ div[data-testid="stSegmentedControl"] span {
 }
 
 /* =========================================================
+   NAV SEGMENTED CONTROL — BASEWEB OVERRIDES (STRONG)
+   ========================================================= */
+
+/* BaseWeb button group wrapper / track */
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"],
+div[data-testid="stSegmentedControl"] [role="group"],
+div[data-testid="stSegmentedControl"] [role="radiogroup"] {
+  background: var(--panel) !important;
+  border-radius: var(--radius) !important;
+  padding: 2px !important;
+}
+
+/* Force every button to dark */
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button,
+div[data-testid="stSegmentedControl"] button {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border: var(--borderW) solid transparent !important;
+  border-radius: calc(var(--radius) - 2px) !important;
+}
+
+/* BaseWeb often paints inner spans/divs white */
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button *,
+div[data-testid="stSegmentedControl"] button * {
+  background: transparent !important;
+  color: inherit !important;
+}
+
+/* Hover: red border, still dark */
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button:hover,
+div[data-testid="stSegmentedControl"] button:hover {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Active/selected: persistent red border (cover multiple Streamlit/BaseWeb states) */
+div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
+div[data-testid="stSegmentedControl"] [aria-selected="true"] button,
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button[aria-selected="true"] {
+  background: var(--panel) !important;
+  color: var(--text) !important;
+  border-color: var(--accent) !important;
+}
+
+/* Kill default focus/outline that can add light rings */
+div[data-testid="stSegmentedControl"] button:focus,
+div[data-testid="stSegmentedControl"] button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* LAST RESORT: If the “pill” still stays white, force any descendant div to transparent */
+div[data-testid="stSegmentedControl"] div,
+div[data-testid="stSegmentedControl"] span {
+  background-color: transparent !important;
+}
+
+/* =========================================================
    NAV: Radio fallback (force dark labels)
    ========================================================= */
 
