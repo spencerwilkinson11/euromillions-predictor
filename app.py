@@ -341,9 +341,9 @@ if not draws_df.empty:
     draws_df["draw_date"] = draws_df.apply(_draw_date_text, axis=1)
 draws_df = draws_df.reset_index(drop=True)
 
-tabs = st.tabs(["Picks", "Insights", "Tickets", "Home"])
+tab_picks, tab_insights, tab_tickets = st.tabs(["Picks", "Insights", "Tickets"])
 
-with tabs[0]:
+with tab_picks:
     left, main = st.columns([1, 2], gap="large")
 
     with left:
@@ -425,15 +425,9 @@ with tabs[0]:
                 unsafe_allow_html=True,
             )
 
-with tabs[1]:
+with tab_insights:
     render_insights(draws_df)
 
-with tabs[2]:
+with tab_tickets:
     st.subheader("Tickets")
     st.caption("Save and track your generated lines here.")
-
-with tabs[3]:
-    st.subheader("Home")
-    st.caption("Generate smarter lines in Picks and explore performance trends in Insights.")
-    if most_recent:
-        st.metric("Last draw", format_uk_date(_draw_date_text(most_recent)))
