@@ -318,8 +318,7 @@ def render_your_tickets_section(most_recent_draw: dict | None) -> None:
         st.markdown(f'<div class="ticket-match-list">{lines_markup}</div>', unsafe_allow_html=True)
 
     if st.button("View all in Tickets"):
-        st.session_state["page"] = "Tickets"
-        st.rerun()
+        _navigate_to("Tickets")
 
 
 def _ensure_ticket_state() -> None:
@@ -336,9 +335,18 @@ def _ensure_ticket_state() -> None:
     if "page" not in st.session_state:
         st.session_state["page"] = "Picks"
 
+    if "nav_page" not in st.session_state:
+        st.session_state["nav_page"] = st.session_state["page"]
+
 
 def _persist_tickets() -> None:
     save_tickets_to_localstorage(st.session_state.get("tickets", []))
+
+
+def _navigate_to(page_name: str) -> None:
+    st.session_state["page"] = page_name
+    st.session_state["nav_page"] = page_name
+    st.rerun()
 
 def render_insights(draws_df: pd.DataFrame) -> None:
     st.subheader("Insights")
@@ -690,8 +698,7 @@ else:
     if not tickets:
         st.info("No tickets saved yet. Go to Picks to generate lines and save a ticket.")
         if st.button("Go to Picks"):
-            st.session_state["page"] = "Picks"
-            st.rerun()
+            _navigate_to("Picks")
     else:
         if st.button("Clear all tickets", type="secondary"):
             st.session_state["tickets"] = []
