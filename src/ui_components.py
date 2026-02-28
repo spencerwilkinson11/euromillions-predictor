@@ -192,33 +192,30 @@ div[data-baseweb="select"] div {
   -webkit-text-fill-color: #ffffff !important;
 }
 
-div[data-baseweb="popover"] {
-  background: #ffffff !important;
-  color: #111111 !important;
-}
-
-ul[role="listbox"] {
+div[data-baseweb="popover"] ul[role="listbox"] {
   background: #ffffff !important;
   border: 1px solid #e2e8f0 !important;
   border-radius: 0.55rem !important;
   box-shadow: 0 14px 30px rgba(2, 6, 23, 0.22) !important;
 }
 
-ul[role="listbox"] li,
-ul[role="listbox"] li span {
+div[data-baseweb="popover"] ul[role="listbox"] li,
+div[data-baseweb="popover"] ul[role="listbox"] li * {
   background: #ffffff !important;
   color: #111111 !important;
   opacity: 1 !important;
   font-weight: 500 !important;
 }
 
-ul[role="listbox"] li:hover {
+div[data-baseweb="popover"] ul[role="listbox"] li:hover,
+div[data-baseweb="popover"] ul[role="listbox"] li:hover * {
   background: #f1f3f6 !important;
   color: #000000 !important;
+  opacity: 1 !important;
 }
 
-ul[role="listbox"] li[aria-selected="true"],
-li[aria-selected="true"] {
+div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"],
+div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"] * {
   background: #e6f0ff !important;
   color: #000000 !important;
   opacity: 1 !important;
