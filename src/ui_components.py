@@ -213,10 +213,13 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"] * {
 div[data-baseweb="popover"] ul[role="listbox"] li:hover,
 div[data-baseweb="popover"] ul[role="listbox"] li:hover *,
 div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover,
-div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover * {
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover *,
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"][data-highlighted="true"],
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"][data-highlighted="true"] * {
   background: #f1f3f6 !important;
   color: #000000 !important;
   -webkit-text-fill-color: #000000 !important;
+  text-shadow: none !important;
   opacity: 1 !important;
 }
 
