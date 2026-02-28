@@ -977,12 +977,59 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
 
 /* Text/input guard rails for Streamlit theme overrides */
 .stTextInput input,
+.stTextArea textarea,
 .stNumberInput input,
 .stSelectbox label,
 .stSlider label,
 .stCheckbox label,
 [data-testid="stWidgetLabel"] {
   color: var(--text) !important;
+}
+
+/* Action controls: force dark theme so text never disappears on white widget surfaces */
+.stButton > button,
+.stDownloadButton > button,
+button[kind="primary"],
+button[kind="secondary"] {
+  background: #0b1b2b !important;
+  color: #ffffff !important;
+  border: 2px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 12px !important;
+  padding: 0.75rem 1rem !important;
+}
+
+.stButton > button:hover,
+.stDownloadButton > button:hover,
+.stButton > button:focus-visible,
+.stDownloadButton > button:focus-visible {
+  background: #0b1b2b !important;
+  border: 2px solid rgba(255, 75, 75, 0.85) !important;
+  color: #ffffff !important;
+}
+
+.stButton > button:disabled,
+.stDownloadButton > button:disabled {
+  background: rgba(11, 27, 43, 0.65) !important;
+  color: rgba(255, 255, 255, 0.55) !important;
+  border: 2px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+div[data-testid="stButton"],
+div[data-testid="stDownloadButton"] {
+  background: transparent !important;
+}
+
+.stTextInput input,
+.stTextArea textarea,
+.stSelectbox div[data-baseweb="select"] > div {
+  background: #0b1b2b !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+div[data-testid="stExpander"] summary {
+  background: transparent !important;
+  color: #ffffff !important;
 }
 
 /* Navigation tabs (Picks / Insights / Tickets): dark base + red active border */
