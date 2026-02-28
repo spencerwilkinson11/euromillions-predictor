@@ -335,9 +335,6 @@ def _ensure_ticket_state() -> None:
     if "page" not in st.session_state:
         st.session_state["page"] = "Picks"
 
-    if "nav_page" not in st.session_state:
-        st.session_state["nav_page"] = st.session_state["page"]
-
 
 def _persist_tickets() -> None:
     save_tickets_to_localstorage(st.session_state.get("tickets", []))
@@ -345,7 +342,6 @@ def _persist_tickets() -> None:
 
 def _navigate_to(page_name: str) -> None:
     st.session_state["page"] = page_name
-    st.session_state["nav_page"] = page_name
     st.rerun()
 
 def render_insights(draws_df: pd.DataFrame) -> None:
@@ -523,25 +519,29 @@ if not draws_df.empty:
     draws_df["draw_date"] = draws_df.apply(_draw_date_text, axis=1)
 draws_df = draws_df.reset_index(drop=True)
 
+pages = ["Picks", "Insights", "Tickets"]
+current_idx = pages.index(st.session_state["page"]) if st.session_state["page"] in pages else 0
+
 try:
-    page = st.segmented_control(
+    selected = st.segmented_control(
         label="Navigation",
-        options=["Picks", "Insights", "Tickets"],
-        default=st.session_state["page"],
+        options=pages,
+        default=pages[current_idx],
         key="nav_page",
         label_visibility="collapsed",
     )
 except Exception:
-    page = st.radio(
+    selected = st.radio(
         "Navigation",
-        ["Picks", "Insights", "Tickets"],
+        pages,
         horizontal=True,
-        index=["Picks", "Insights", "Tickets"].index(st.session_state["page"]),
+        index=current_idx,
         key="nav_page",
         label_visibility="collapsed",
     )
 
-st.session_state["page"] = page
+if selected != st.session_state["page"]:
+    st.session_state["page"] = selected
 
 if st.session_state["page"] == "Picks":
     render_your_tickets_section(most_recent)
