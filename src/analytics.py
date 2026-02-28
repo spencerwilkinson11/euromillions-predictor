@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections import Counter
-from datetime import datetime
 from typing import Iterable
+
+from src.date_utils import format_uk_date
 
 MAIN_RANGE = list(range(1, 51))
 STAR_RANGE = list(range(1, 13))
@@ -13,10 +14,7 @@ def parse_draw_date(draw: dict) -> str:
     for key in ("date", "drawDate", "draw_date"):
         value = draw.get(key)
         if value:
-            try:
-                return datetime.fromisoformat(str(value).replace("Z", "+00:00")).strftime("%Y-%m-%d")
-            except ValueError:
-                return str(value)
+            return format_uk_date(value)
     return "Unknown date"
 
 
