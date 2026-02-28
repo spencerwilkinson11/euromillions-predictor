@@ -7,7 +7,7 @@ import streamlit as st
 
 from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
 from src.strategies import STRATEGIES, build_line, explain_line
-from src.ui_components import app_styles, render_balls, render_insight_card, render_last_result_banner
+from src.ui_components import app_styles, render_insight_card, render_last_result_banner, render_result_card
 
 st.set_page_config(page_title="EuroMillions AI Decision Engine", layout="wide")
 
@@ -169,6 +169,7 @@ if generate:
         m2.metric("Most frequent main", main_counter.most_common(1)[0][0])
         m3.metric("Most frequent star", star_counter.most_common(1)[0][0])
 
+        st.markdown('<div class="em-results">', unsafe_allow_html=True)
         for idx in range(1, line_count + 1):
             nums, stars = build_line(strategy, main_counter, star_counter, draws)
 
@@ -187,12 +188,18 @@ if generate:
                 strategy=strategy,
             )
 
-            with st.container(border=True):
-                st.markdown(f"**Line {idx}**")
-                render_balls(nums, stars)
-                st.progress(score / 100, text=f"Confidence: {score}/100")
-                for reason in explanation[:3]:
-                    st.markdown(f"- {reason}")
+            reasons = [*explanation[:3], f"Strategy used: {strategy}"]
+            st.markdown(
+                render_result_card(
+                    line_index=idx,
+                    main_nums=nums,
+                    stars=stars,
+                    confidence=score,
+                    reasons=reasons,
+                ),
+                unsafe_allow_html=True,
+            )
+        st.markdown('</div>', unsafe_allow_html=True)
 
         st.markdown(
             '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
