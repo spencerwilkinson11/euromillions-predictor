@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import datetime, timezone
+from html import escape
 from typing import Callable
 import json
 import uuid
@@ -12,7 +13,7 @@ from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, 
 from src.jackpot_service import get_live_jackpot
 from src.strategies import STRATEGIES, build_line, explain_line
 from src import ui_components
-from src.ticket_storage import load_tickets_from_localstorage, save_tickets_to_localstorage, deserialize_tickets
+from src.ticket_storage import load_tickets_from_localstorage, save_tickets_to_localstorage
 
 
 def _resolve_ui_function(*names: str) -> Callable | None:
@@ -222,12 +223,68 @@ def _new_ticket(lines: list[dict], strategy: str) -> dict:
     }
 
 
-def _ensure_ticket_state() -> None:
-    if "tickets" in st.session_state:
+def _render_ticket_line_with_matches(line: dict, winning_mains: set[int], winning_stars: set[int]) -> str:
+    mains = line.get("main", [])
+    stars = line.get("stars", [])
+
+    main_markup = "".join(
+        [
+            f'<span class="ball {"matched" if value in winning_mains else ""}">{int(value)}</span>'
+            for value in mains
+        ]
+    )
+    star_markup = "".join(
+        [
+            f'<span class="ball star {"matched" if value in winning_stars else ""}">{int(value)}</span>'
+            for value in stars
+        ]
+    )
+
+    matches = sum(1 for value in mains if value in winning_mains) + sum(1 for value in stars if value in winning_stars)
+    return (
+        '<div class="ticket-match-line">'
+        f'<div class="ticket-line-balls"><div class="ball-group">{main_markup}</div><div class="ball-divider">+</div><div class="ball-group">{star_markup}</div></div>'
+        f'<div class="match-count-badge">{matches}</div>'
+        '</div>'
+    )
+
+
+def render_your_tickets_section(most_recent_draw: dict | None) -> None:
+    st.markdown("### Your Tickets")
+    tickets = st.session_state.get("tickets", [])
+    if not tickets:
+        st.info("No saved tickets yet. Generate picks and save a ticket.")
         return
 
-    loaded_tickets = load_tickets_from_localstorage()
-    st.session_state["tickets"] = loaded_tickets if isinstance(loaded_tickets, list) else []
+    recent_tickets = list(reversed(tickets[-3:]))
+    winning_mains = set(int(value) for value in (most_recent_draw or {}).get("numbers", []) if isinstance(value, int))
+    winning_stars = set(int(value) for value in (most_recent_draw or {}).get("stars", []) if isinstance(value, int))
+
+    for ticket in recent_tickets:
+        created_at = format_uk_date(ticket.get("created_at"))
+        strategy = escape(str(ticket.get("strategy", "Unknown strategy")))
+        lines = _safe_ticket_lines(ticket.get("lines", []))[:5]
+        st.markdown(f"**{strategy}** · {created_at}")
+        lines_markup = "".join(
+            [_render_ticket_line_with_matches(line, winning_mains=winning_mains, winning_stars=winning_stars) for line in lines]
+        )
+        st.markdown(f'<div class="ticket-match-list">{lines_markup}</div>', unsafe_allow_html=True)
+
+    if st.button("View all in Tickets"):
+        st.session_state["page"] = "Tickets"
+        st.rerun()
+
+
+def _ensure_ticket_state() -> None:
+    if "tickets" not in st.session_state:
+        loaded_tickets = load_tickets_from_localstorage()
+        st.session_state["tickets"] = loaded_tickets if isinstance(loaded_tickets, list) else []
+
+    if "last_generated_lines" not in st.session_state:
+        st.session_state["last_generated_lines"] = None
+
+    if "page" not in st.session_state:
+        st.session_state["page"] = "Picks"
 
 
 def _persist_tickets() -> None:
@@ -383,6 +440,9 @@ jackpot_html = ui_components.render_jackpot_card(
 if st.sidebar.checkbox("Debug jackpot source"):
     st.sidebar.write(meta)
 
+if st.sidebar.checkbox("Debug tickets state"):
+    st.sidebar.write("tickets", len(st.session_state.get("tickets", [])))
+
 st.markdown(
     render_last_result_banner(most_recent, brand_text="Wilkos LuckyLogic", jackpot_html=jackpot_html),
     unsafe_allow_html=True,
@@ -393,9 +453,28 @@ if not draws_df.empty:
     draws_df["draw_date"] = draws_df.apply(_draw_date_text, axis=1)
 draws_df = draws_df.reset_index(drop=True)
 
-tab_picks, tab_insights, tab_tickets = st.tabs(["Picks", "Insights", "Tickets"])
+try:
+    page = st.segmented_control(
+        label="Navigation",
+        options=["Picks", "Insights", "Tickets"],
+        default=st.session_state["page"],
+        key="nav_page",
+        label_visibility="collapsed",
+    )
+except Exception:
+    page = st.radio(
+        "Navigation",
+        ["Picks", "Insights", "Tickets"],
+        horizontal=True,
+        index=["Picks", "Insights", "Tickets"].index(st.session_state["page"]),
+        key="nav_page",
+        label_visibility="collapsed",
+    )
 
-with tab_picks:
+st.session_state["page"] = page
+
+if st.session_state["page"] == "Picks":
+    render_your_tickets_section(most_recent)
     left, main = st.columns([1, 2], gap="large")
 
     with left:
@@ -412,6 +491,19 @@ with tab_picks:
     with main:
         st.subheader("Generated Lines + Rationale")
         st.write("Select a strategy and generate lines to view confidence scoring and reasoning.")
+
+        last_generated = st.session_state.get("last_generated_lines")
+        if last_generated and isinstance(last_generated.get("lines"), list):
+            st.caption("Your last generated set is ready to save.")
+            if st.button("💾 Save as Ticket", use_container_width=True):
+                ticket = _new_ticket(
+                    lines=last_generated.get("lines", []),
+                    strategy=last_generated.get("strategy", "Balanced Mix"),
+                )
+                ticket["draw_date"] = last_generated.get("next_draw_date") or ticket["draw_date"]
+                st.session_state["tickets"].append(ticket)
+                _persist_tickets()
+                st.success("Ticket saved.")
 
     if generate:
         with st.spinner("Fetching latest draw history..."):
@@ -475,21 +567,28 @@ with tab_picks:
                 )
             st.markdown('</div>', unsafe_allow_html=True)
 
+            st.session_state["last_generated_lines"] = {
+                "lines": generated_lines,
+                "strategy": strategy,
+                "next_draw_date": meta.next_draw_date,
+                "generated_at": datetime.now(timezone.utc).isoformat(),
+            }
             if st.button("Save generated lines as ticket 🎟️", use_container_width=True):
                 ticket = _new_ticket(lines=generated_lines, strategy=strategy)
+                ticket["draw_date"] = meta.next_draw_date or ticket["draw_date"]
                 st.session_state["tickets"].append(ticket)
                 _persist_tickets()
-                st.success("Ticket saved on this device.")
+                st.success("Ticket saved.")
 
             st.markdown(
                 '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
                 unsafe_allow_html=True,
             )
 
-with tab_insights:
+elif st.session_state["page"] == "Insights":
     render_insights(draws_df)
 
-with tab_tickets:
+else:
     st.subheader("Tickets")
     st.caption("Save and track your generated lines here.")
     st.caption("Tickets are saved on this device (no login).")
@@ -504,24 +603,15 @@ with tab_tickets:
             mime="application/json",
             use_container_width=True,
         )
-
     with import_col:
-        uploaded_file = st.file_uploader("Import tickets JSON", type=["json"], label_visibility="collapsed")
-        if uploaded_file is not None:
-            imported_text = uploaded_file.getvalue().decode("utf-8", errors="ignore")
-            imported_tickets = deserialize_tickets(imported_text)
-            if imported_tickets:
-                st.session_state["tickets"] = imported_tickets
-                _persist_tickets()
-                st.success(f"Imported {len(imported_tickets)} ticket(s).")
-            else:
-                st.warning("Import file was empty or invalid JSON list.")
+        st.empty()
 
     tickets = st.session_state.get("tickets", [])
     if not tickets:
         st.info("No tickets saved yet. Go to Picks to generate lines and save a ticket.")
         if st.button("Go to Picks"):
-            st.toast("Open the Picks tab to generate lines.")
+            st.session_state["page"] = "Picks"
+            st.rerun()
     else:
         if st.button("Clear all tickets", type="secondary"):
             st.session_state["tickets"] = []
