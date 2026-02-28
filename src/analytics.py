@@ -35,15 +35,26 @@ def frequency_counter(draws: list[dict]) -> tuple[Counter, Counter]:
 
 def overdue_gaps(draws: list[dict]) -> tuple[dict[int, int], dict[int, int]]:
     """Gap is draw distance from most recent appearance (0 means in latest draw)."""
-    main_gap = {n: len(draws) + 1 for n in MAIN_RANGE}
-    star_gap = {s: len(draws) + 1 for s in STAR_RANGE}
+    default_gap = len(draws) + 1
+    main_gap = {n: default_gap for n in MAIN_RANGE}
+    star_gap = {s: default_gap for s in STAR_RANGE}
 
-    for idx, draw in enumerate(draws):
+    def sort_key(draw: dict) -> tuple[int, str]:
+        """Sort by draw date descending when available, otherwise preserve order."""
+        for key in ("date", "drawDate", "draw_date"):
+            value = draw.get(key)
+            if value:
+                return (1, str(value))
+        return (0, "")
+
+    ordered_draws = sorted(draws, key=sort_key, reverse=True)
+
+    for idx, draw in enumerate(ordered_draws):
         for n in draw.get("numbers", []):
-            if main_gap[n] > len(draws):
+            if n in main_gap and main_gap[n] == default_gap:
                 main_gap[n] = idx
         for s in draw.get("stars", []):
-            if star_gap[s] > len(draws):
+            if s in star_gap and star_gap[s] == default_gap:
                 star_gap[s] = idx
 
     return main_gap, star_gap
