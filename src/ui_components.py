@@ -934,26 +934,32 @@ div[data-testid="stExpander"] summary {
 /* ---------- NAV: Segmented control ---------- */
 div[data-testid="stSegmentedControl"],
 div[data-testid="stSegmentedControl"] > div,
-div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] {
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"],
+div[role="radiogroup"][data-baseweb="button-group"] {
   background: transparent !important;
 }
 
-div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] {
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"],
+div[role="radiogroup"][data-baseweb="button-group"] {
   gap: 0.45rem;
 }
 
 div[data-testid="stSegmentedControl"] button,
-div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button {
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button,
+div[role="radiogroup"][data-baseweb="button-group"] button {
   background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
   color: #ffffff !important;
   border: 2px solid transparent !important;
+  border-color: transparent !important;
   border-radius: 10px !important;
   padding: 8px 16px !important;
 }
 
 /* keep dark on hover */
 div[data-testid="stSegmentedControl"] button:hover,
-div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button:hover {
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button:hover,
+div[role="radiogroup"][data-baseweb="button-group"] button:hover {
   background: #0b1b2b !important;
   color: #ffffff !important;
 }
@@ -961,9 +967,60 @@ div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button:ho
 /* active item gets red border */
 div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
 div[data-testid="stSegmentedControl"] button[aria-selected="true"],
-div[data-testid="stSegmentedControl"] [aria-selected="true"] {
+div[data-testid="stSegmentedControl"] [aria-selected="true"],
+div[role="radiogroup"][data-baseweb="button-group"] button[kind="segmented_controlActive"],
+div[role="radiogroup"][data-baseweb="button-group"] button[aria-pressed="true"] {
   border: 2px solid #ff4b4b !important;
+  border-color: #ff4b4b !important;
   background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
+  color: #ffffff !important;
+}
+
+
+/* Streamlit base button variants (override Emotion defaults) */
+button[data-testid="stBaseButton-segmented_control"],
+button[data-testid="stBaseButton-segmented_controlActive"] {
+  background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  border-color: transparent !important;
+  border-radius: 10px !important;
+}
+
+button[data-testid="stBaseButton-segmented_controlActive"] {
+  border: 2px solid #ff4b4b !important;
+  border-color: #ff4b4b !important;
+}
+
+button[data-testid="stBaseButton-segmented_control"]:hover,
+button[data-testid="stBaseButton-segmented_controlActive"]:hover {
+  background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
+  color: #ffffff !important;
+}
+
+
+/* Highest-specificity overrides for Streamlit segmented buttons */
+.stApp div[role="radiogroup"][data-baseweb="button-group"] > button[kind="segmented_control"],
+.stApp div[role="radiogroup"][data-baseweb="button-group"] > button[kind="segmented_controlActive"] {
+  background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
+  color: #ffffff !important;
+  border: 2px solid transparent !important;
+  border-color: transparent !important;
+}
+
+.stApp div[role="radiogroup"][data-baseweb="button-group"] > button[kind="segmented_controlActive"] {
+  border: 2px solid #ff4b4b !important;
+  border-color: #ff4b4b !important;
+}
+
+.stApp div[role="radiogroup"][data-baseweb="button-group"] > button[kind="segmented_control"]:hover,
+.stApp div[role="radiogroup"][data-baseweb="button-group"] > button[kind="segmented_controlActive"]:hover {
+  background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
   color: #ffffff !important;
 }
 
@@ -976,8 +1033,10 @@ div[role="radiogroup"] > div {
 div[role="radiogroup"] label,
 div[role="radiogroup"] label > div {
   background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
   color: #ffffff !important;
   border: 2px solid transparent !important;
+  border-color: transparent !important;
   border-radius: 10px !important;
   padding: 8px 16px !important;
 }
@@ -995,12 +1054,15 @@ div[role="radiogroup"] input:checked + label,
 div[role="radiogroup"] label[data-checked="true"],
 div[role="radiogroup"] label[data-checked="true"] > div {
   border: 2px solid #ff4b4b !important;
+  border-color: #ff4b4b !important;
   background: #0b1b2b !important;
+  background-color: #0b1b2b !important;
   color: #ffffff !important;
 }
 
 /* remove any default focus/grey effects */
 div[data-testid="stSegmentedControl"] button:focus,
+div[role="radiogroup"] button:focus,
 div[role="radiogroup"] label:focus-within {
   outline: none !important;
   box-shadow: none !important;
