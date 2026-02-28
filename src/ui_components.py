@@ -985,6 +985,42 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
   color: var(--text) !important;
 }
 
+/* Navigation tabs (Picks / Insights / Tickets): dark base + red active border */
+div[role="radiogroup"],
+div[data-baseweb="button-group"] {
+  gap: 0.45rem;
+}
+
+div[role="radiogroup"] label,
+div[data-baseweb="button-group"] button {
+  background: #0b1b2b !important;
+  color: #f8fafc !important;
+  border: 2px solid transparent !important;
+  border-radius: 0.55rem !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+div[role="radiogroup"] label:hover,
+div[data-baseweb="button-group"] button:hover {
+  background: #0b1b2b !important;
+  color: #f8fafc !important;
+  opacity: 0.88;
+}
+
+div[role="radiogroup"] input:checked + div,
+div[role="radiogroup"] label[data-checked="true"],
+div[data-baseweb="button-group"] button[aria-selected="true"] {
+  background: #0b1b2b !important;
+  border: 2px solid #ff4b4b !important;
+  box-shadow: 0 0 0 1px rgba(255, 75, 75, 0.2), 0 0 14px rgba(255, 75, 75, 0.16);
+  color: #ffffff !important;
+}
+
+div[role="radiogroup"] input:not(:checked) + div,
+div[data-baseweb="button-group"] button[aria-selected="false"] {
+  border: 2px solid transparent !important;
+}
+
 @media (max-width: 640px) {
   .app-header {
     align-items: flex-start;
