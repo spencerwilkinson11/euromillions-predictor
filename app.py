@@ -243,6 +243,7 @@ meta = fetch_national_lottery_euromillions_meta()
 jackpot_amount = meta.get("jackpot_amount") if meta.get("ok") else None
 if jackpot_amount is None:
     jackpot_amount = _fallback_jackpot_from_draw(most_recent)
+jackpot_amount = jackpot_amount or "Jackpot unavailable"
 
 jackpot_html = ui_components.render_jackpot_card(
     jackpot_amount=jackpot_amount,

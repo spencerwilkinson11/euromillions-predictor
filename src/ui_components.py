@@ -105,6 +105,8 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
     if formatted_jackpot:
         draw_meta += f'<div class="last-result-meta-item"><span class="meta-label">Jackpot</span><strong>{formatted_jackpot}</strong></div>'
 
+    meta_row_markup = f'<div class="last-result-meta-row">{draw_meta}</div>' if draw_meta else ""
+
     return (
         f'<div class="last-result-banner">'
         f'<div class="last-result-main">'
@@ -115,7 +117,7 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
         f'<div class="last-result-ball-row">{numbers_markup}</div>'
         f'<div class="last-result-stars-row">{stars_markup}</div>'
         f'</div>'
-        f'<div class="last-result-meta-row">{draw_meta}</div>'
+        f'{meta_row_markup}'
         f'</div>'
         f'<div class="last-result-right">'
         f'<div class="last-result-cta-panel">'
@@ -128,29 +130,31 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
     )
 
 
-def render_jackpot_card(jackpot_amount: int | None, next_draw_date: str | None, next_draw_day: str | None) -> str:
-    amount_markup = "Jackpot unavailable"
-    if isinstance(jackpot_amount, int) and jackpot_amount > 0:
-        amount_markup = f"£{jackpot_amount:,}"
+def render_jackpot_card(
+    jackpot_amount=None,
+    next_draw_date=None,
+    next_draw_day=None,
+    brand_text="EUROMILLIONS",
+    **kwargs,
+) -> str:
+    """
+    Renders jackpot card safely.
+    Accepts flexible keyword arguments to prevent future crashes.
+    """
 
-    draw_hint = None
-    if next_draw_date:
-        draw_hint = f"Next draw: {_format_draw_date(next_draw_date)}"
-    elif next_draw_day:
-        draw_hint = f"Next draw: {next_draw_day}"
+    amount = escape(str(jackpot_amount)) if jackpot_amount else "Jackpot unavailable"
 
-    play_url = "https://www.national-lottery.co.uk/games/euromillions"
+    meta = ""
+    if next_draw_day or next_draw_date:
+        meta = f"<div class='jackpot-meta'>{escape(str(next_draw_day or ''))} {escape(str(next_draw_date or ''))}</div>"
 
     return (
-        f'<div class="jackpot-card" role="region" aria-label="Latest EuroMillions jackpot">'
-        f'<div class="jackpot-top">'
-        f'<div class="jackpot-day">EUROMILLIONS<span class="jackpot-reg">®</span></div>'
-        f'<div class="jackpot-rule"></div>'
-        f'</div>'
-        f'<div class="jackpot-amount">{amount_markup}</div>'
-        f'<div class="jackpot-label">Estimated jackpot</div>'
-        f'<div class="jackpot-next">{draw_hint or "Next draw date unavailable"}</div>'
-        f'<a class="jackpot-play" href="{play_url}" target="_blank" rel="noopener noreferrer">Play for £2.50</a>'
+        f'<div class="jackpot-card">'
+        f'<div class="jackpot-brand">{escape(brand_text)}</div>'
+        f'<div class="jackpot-amount">{amount}</div>'
+        f'{meta}'
+        f'<a class="jackpot-cta" href="https://www.national-lottery.co.uk/results/euromillions" '
+        f'target="_blank" rel="noopener noreferrer">Play for £2.50</a>'
         f'</div>'
     )
 
@@ -621,7 +625,15 @@ hr,
   font-weight: 700;
 }
 
-.jackpot-play {
+.jackpot-meta {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  color: rgba(11, 27, 140, 0.85);
+  font-weight: 700;
+}
+
+.jackpot-play,
+.jackpot-cta {
   display: block;
   margin-top: 16px;
   text-decoration: none;
@@ -635,7 +647,8 @@ hr,
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.jackpot-play:hover {
+.jackpot-play:hover,
+.jackpot-cta:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 30px rgba(11, 27, 140, 0.45);
 }
