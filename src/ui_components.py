@@ -200,30 +200,43 @@ div[data-baseweb="popover"] ul[role="listbox"] {
 }
 
 div[data-baseweb="popover"] ul[role="listbox"] li,
-div[data-baseweb="popover"] ul[role="listbox"] li * {
+div[data-baseweb="popover"] ul[role="listbox"] li *,
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"],
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"] * {
   background: #ffffff !important;
   color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
   opacity: 1 !important;
   font-weight: 500 !important;
 }
 
 div[data-baseweb="popover"] ul[role="listbox"] li:hover,
-div[data-baseweb="popover"] ul[role="listbox"] li:hover * {
+div[data-baseweb="popover"] ul[role="listbox"] li:hover *,
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover,
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"]:hover * {
   background: #f1f3f6 !important;
   color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
   opacity: 1 !important;
 }
 
 div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"],
-div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"] * {
+div[data-baseweb="popover"] ul[role="listbox"] li[aria-selected="true"] *,
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-selected="true"],
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-selected="true"] * {
   background: #e6f0ff !important;
   color: #000000 !important;
+  -webkit-text-fill-color: #000000 !important;
   opacity: 1 !important;
 }
 
-li[aria-disabled="true"] {
+div[data-baseweb="popover"] ul[role="listbox"] li[aria-disabled="true"],
+div[data-baseweb="popover"] ul[role="listbox"] li[aria-disabled="true"] *,
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="true"],
+div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="true"] * {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111 !important;
   opacity: 1 !important;
-  color: #999999 !important;
 }
 
 /* Text/input guard rails for Streamlit theme overrides */
