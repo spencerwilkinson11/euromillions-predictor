@@ -52,22 +52,26 @@ def _format_jackpot(value: object) -> str | None:
     return text
 
 
-def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS") -> str:
+def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS", jackpot_html: str = "") -> str:
     safe_brand_text = escape(brand_text)
     if not draw:
         return f"""
-        <div class=\"last-result-banner\">
-            <div class=\"last-result-main\">
-                <div class=\"last-result-brand\">{safe_brand_text}</div>
+        <div class="last-result-banner">
+            <div class="last-result-main">
+                <div class="last-result-brand">{safe_brand_text}</div>
                 <h2>Last result</h2>
-                <p class=\"last-result-date\">No draw data available right now.</p>
+                <p class="last-result-date">No draw data available right now.</p>
             </div>
-            <div class=\"last-result-cta-panel\">
-                <div class=\"last-result-cta-title\">Are you a winner?</div>
-                <a class=\"last-result-cta-button\" href=\"https://www.national-lottery.co.uk/results/euromillions\" target=\"_blank\" rel=\"noopener noreferrer\">Check results</a>
+            <div class="last-result-right">
+                <div class="last-result-cta-panel">
+                    <div class="last-result-cta-title">Are you a winner?</div>
+                    <a class="last-result-cta-button" href="https://www.national-lottery.co.uk/results/euromillions" target="_blank" rel="noopener noreferrer">Check results</a>
+                </div>
+                {jackpot_html}
             </div>
         </div>
         """
+
 
     main_numbers: list[int] = []
     for value in draw.get("numbers", []) or []:
@@ -114,13 +118,39 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
             </div>
             <div class="last-result-meta-row">{draw_meta}</div>
         </div>
-        <div class="last-result-cta-panel">
-            <div class="last-result-cta-title">Are you a winner?</div>
-            <a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>
+        <div class="last-result-right">
+            <div class="last-result-cta-panel">
+                <div class="last-result-cta-title">Are you a winner?</div>
+                <a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>
+            </div>
+            {jackpot_html}
         </div>
     </div>
     """
 
+
+
+def render_jackpot_card(jackpot_amount: int | None, next_draw_day: str | None) -> str:
+    amount_markup = "Jackpot"
+    if isinstance(jackpot_amount, int) and jackpot_amount > 0:
+        amount_m = jackpot_amount / 1_000_000
+        amount_markup = f"£{int(round(amount_m))}M<span class='jackpot-asterisk'>*</span>"
+
+    day_text = "This " + (next_draw_day or "Draw")
+    play_url = "https://www.national-lottery.co.uk/games/euromillions"
+
+    return f"""
+    <div class="jackpot-card" role="region" aria-label="Latest EuroMillions jackpot">
+      <div class="jackpot-top">
+        <div class="jackpot-day">{day_text}</div>
+        <div class="jackpot-rule"></div>
+      </div>
+      <div class="jackpot-brand">EUROMILLIONS<span class="jackpot-reg">®</span></div>
+      <div class="jackpot-amount">{amount_markup}</div>
+      <div class="jackpot-label">Jackpot</div>
+      <a class="jackpot-play" href="{play_url}" target="_blank" rel="noopener noreferrer">Play for £2.50</a>
+    </div>
+    """
 
 def render_app_header(app_name: str = "Wilkos LuckyLogic", tagline: str = "Smarter EuroMillions picks") -> str:
     return f"""
@@ -461,6 +491,30 @@ hr,
   gap: 0.55rem;
 }
 
+
+
+.last-result-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 260px;
+}
+
+@media (min-width: 980px) {
+  .last-result-right {
+    flex-direction: row;
+    align-items: stretch;
+  }
+
+  .last-result-cta-panel {
+    width: 230px;
+  }
+
+  .jackpot-card {
+    width: 260px;
+  }
+}
+
 .last-result-cta-title {
   font-weight: 700;
 }
@@ -486,6 +540,89 @@ hr,
 @keyframes ctaPulse {
   0%, 100% { box-shadow: 0 8px 18px rgba(245, 158, 11, 0.3); }
   50% { box-shadow: 0 12px 25px rgba(251, 191, 36, 0.4); }
+}
+
+
+.jackpot-card {
+  border-radius: 22px;
+  background: linear-gradient(180deg, #f7b500 0%, #f5a800 100%);
+  padding: 16px 16px 14px;
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.35);
+  border: 1px solid rgba(11, 27, 140, 0.18);
+  color: #0b1b8c;
+  position: relative;
+  overflow: hidden;
+}
+
+.jackpot-top {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.jackpot-day {
+  font-weight: 800;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  color: #0b1b8c;
+}
+
+.jackpot-rule {
+  height: 1px;
+  background: rgba(11, 27, 140, 0.35);
+}
+
+.jackpot-brand {
+  margin-top: 10px;
+  font-weight: 900;
+  letter-spacing: 0.02em;
+  font-size: 1.15rem;
+  color: #0b1b8c;
+}
+
+.jackpot-reg {
+  font-size: 0.8rem;
+  vertical-align: super;
+  margin-left: 2px;
+}
+
+.jackpot-amount {
+  margin-top: 10px;
+  font-weight: 900;
+  font-size: 3.1rem;
+  line-height: 1;
+  color: #0b1b8c;
+}
+
+.jackpot-asterisk {
+  font-size: 1.3rem;
+  vertical-align: super;
+}
+
+.jackpot-label {
+  margin-top: 8px;
+  font-weight: 900;
+  font-size: 1.55rem;
+  color: #0b1b8c;
+}
+
+.jackpot-play {
+  display: block;
+  margin-top: 16px;
+  text-decoration: none;
+  text-align: center;
+  border-radius: 999px;
+  background: #0b1b8c;
+  color: #ffffff;
+  font-weight: 900;
+  padding: 12px 14px;
+  box-shadow: 0 10px 24px rgba(11, 27, 140, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.jackpot-play:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(11, 27, 140, 0.45);
 }
 
 .insight-card {
@@ -795,7 +932,13 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
     flex-direction: column;
   }
 
-  .last-result-cta-panel {
+  .last-result-right {
+    min-width: auto;
+    width: 100%;
+  }
+
+  .last-result-cta-panel,
+  .jackpot-card {
     min-width: auto;
     width: 100%;
   }
