@@ -1,13 +1,13 @@
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Callable
-import xml.etree.ElementTree as ET
 
 import pandas as pd
 import requests
 import streamlit as st
 
 from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
+from src.jackpot_service import get_live_jackpot
 from src.strategies import STRATEGIES, build_line, explain_line
 from src import ui_components
 
@@ -74,56 +74,8 @@ def fetch_draws():
 
 
 @st.cache_data(ttl=30 * 60)
-def fetch_national_lottery_euromillions_meta() -> dict:
-    url = "https://www.national-lottery.co.uk/results/euromillions/draw-history/xml"
-    headers = {
-        "User-Agent": (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/123.0.0.0 Safari/537.36"
-        ),
-        "Accept": "application/xml,text/xml",
-        "Referer": "https://www.national-lottery.co.uk/results/euromillions",
-    }
-    try:
-        response = requests.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-        root = ET.fromstring(response.text)
-
-        latest_draw = None
-        for draw in root.findall(".//draw-results"):
-            latest_flag = draw.findtext("is-latest-draw")
-            if (latest_flag or "").strip().upper() == "Y":
-                latest_draw = draw
-                break
-
-        if latest_draw is None:
-            latest_draw = root.find(".//draw-results")
-
-        if latest_draw is None:
-            return {"ok": False}
-
-        next_estimated_jackpot_text = root.findtext(".//next-estimated-jackpot")
-        jackpot_amount_text = latest_draw.findtext(".//game/jackpot-amount")
-        next_draw_date = root.findtext(".//next-draw-date") or latest_draw.findtext(".//game/next-draw-date")
-        next_draw_day = latest_draw.findtext(".//game/next-draw-day")
-
-        jackpot_amount = None
-        jackpot_candidate = next_estimated_jackpot_text or jackpot_amount_text
-        if jackpot_candidate:
-            cleaned = jackpot_candidate.replace(",", "").strip()
-            if cleaned.isdigit():
-                jackpot_amount = int(cleaned)
-
-        return {
-            "ok": True,
-            "jackpot_amount": jackpot_amount,
-            "next_draw_date": (next_draw_date or "").strip(),
-            "next_draw_day": (next_draw_day or "").strip().title(),
-            "source": url,
-        }
-    except Exception:
-        return {"ok": False}
+def cached_jackpot():
+    return get_live_jackpot()
 
 
 def _fallback_jackpot_from_draw(draw: dict | None) -> int | None:
@@ -239,17 +191,22 @@ except requests.RequestException:
 
 ordered_draws = prepare_draws(all_draws, len(all_draws) if all_draws else 0)
 most_recent = ordered_draws[0] if ordered_draws else None
-meta = fetch_national_lottery_euromillions_meta()
-jackpot_amount = meta.get("jackpot_amount") if meta.get("ok") else None
+meta = cached_jackpot()
+jackpot_amount = meta.jackpot_amount
 if jackpot_amount is None:
-    jackpot_amount = _fallback_jackpot_from_draw(most_recent)
+    fallback_jackpot = _fallback_jackpot_from_draw(most_recent)
+    jackpot_amount = f"£{fallback_jackpot:,}" if fallback_jackpot else None
 jackpot_amount = jackpot_amount or "Jackpot unavailable"
 
 jackpot_html = ui_components.render_jackpot_card(
     jackpot_amount=jackpot_amount,
-    next_draw_date=meta.get("next_draw_date") if meta.get("ok") else None,
-    next_draw_day=meta.get("next_draw_day") if meta.get("ok") else None,
+    next_draw_date=meta.next_draw_date if meta.ok else None,
+    next_draw_day=meta.next_draw_day if meta.ok else None,
 )
+
+if st.sidebar.checkbox("Debug jackpot source"):
+    st.sidebar.write(meta)
+
 st.markdown(
     render_last_result_banner(most_recent, brand_text="Wilkos LuckyLogic", jackpot_html=jackpot_html),
     unsafe_allow_html=True,
