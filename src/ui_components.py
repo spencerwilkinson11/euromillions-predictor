@@ -253,8 +253,8 @@ html, body, [class*="css"] {
 }
 
 .block-container {
-  padding-top: 1.4rem;
-  padding-bottom: 1.6rem;
+  padding-top: 0.6rem;
+  padding-bottom: 1rem;
 }
 
 h1, h2, h3, h4,
@@ -282,9 +282,9 @@ hr,
 
 .app-header {
   display: flex;
-  align-items: center;
-  gap: 0.9rem;
-  margin: 0 0 0.6rem;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin: 0 0 0.35rem;
 }
 
 .app-logo {
@@ -301,11 +301,12 @@ hr,
   background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #06b6d4 100%);
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 16px 30px rgba(15, 23, 42, 0.45);
+  margin-top: 0.05rem;
 }
 
 .app-header-copy {
   display: grid;
-  gap: 0.15rem;
+  gap: 0.05rem;
 }
 
 .app-title {
@@ -323,10 +324,11 @@ hr,
   margin: 0;
   color: var(--muted);
   font-size: 0.95rem;
+  line-height: 1.2;
 }
 
 .last-result-banner {
-  margin: 0.8rem 0 1rem;
+  margin: 0.45rem 0 1rem;
   border-radius: 1.1rem;
   border: 1px solid rgba(148, 163, 184, 0.3);
   background:
