@@ -157,6 +157,130 @@ def prepare_draws(draws: list[dict] | None, history_n: int) -> list[dict]:
     return ordered[:history_n]
 
 
+def format_uk_date(date_str: str | None) -> str:
+    if not date_str:
+        return "Date unavailable"
+
+    value = str(date_str).strip()
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return dt.strftime("%d %b %Y")
+    except ValueError:
+        for pattern in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y", "%Y/%m/%d"):
+            try:
+                return datetime.strptime(value, pattern).strftime("%d %b %Y")
+            except ValueError:
+                continue
+    return value
+
+
+def _draw_date_text(draw: dict) -> str:
+    for key in ("date", "drawDate", "draw_date"):
+        value = draw.get(key)
+        if value not in (None, ""):
+            return str(value)
+    return ""
+
+
+def render_insights(draws_df: pd.DataFrame) -> None:
+    st.subheader("Insights")
+    if draws_df.empty:
+        st.info("No draw data available to generate insights.")
+        return
+
+    try:
+        selected = st.segmented_control(
+            "Range",
+            ["Last 50", "Last 100", "Last 200", "All"],
+            default="Last 100",
+        )
+    except Exception:
+        selected = st.radio(
+            "Range",
+            ["Last 50", "Last 100", "Last 200", "All"],
+            horizontal=True,
+            index=1,
+        )
+
+    if selected == "Last 50":
+        N = 50
+    elif selected == "Last 100":
+        N = 100
+    elif selected == "Last 200":
+        N = 200
+    else:
+        N = len(draws_df)
+
+    filtered_df = draws_df.head(N).copy()
+
+    if selected == "All":
+        st.caption("Based on all draws")
+    else:
+        st.caption(f"Based on last {len(filtered_df)} draws")
+
+    number_counter = Counter()
+    for values in filtered_df["numbers"]:
+        if isinstance(values, list):
+            number_counter.update(values)
+
+    if not number_counter:
+        st.warning("No number frequencies available for the selected range.")
+        return
+
+    hot_number = number_counter.most_common(1)[0][0]
+    cold_number = sorted(number_counter.items(), key=lambda item: (item[1], item[0]))[0][0]
+
+    overdue_rows: list[dict] = []
+    for number in range(1, 51):
+        draws_since_seen = len(filtered_df)
+        last_seen_date = "Never in range"
+
+        for idx, row in filtered_df.iterrows():
+            values = row.get("numbers", [])
+            if isinstance(values, list) and number in values:
+                draws_since_seen = int(idx)
+                last_seen_date = format_uk_date(row.get("draw_date", ""))
+                break
+
+        overdue_rows.append(
+            {
+                "number": number,
+                "draws_since_seen": draws_since_seen,
+                "last_seen_date": last_seen_date,
+            }
+        )
+
+    overdue_df = pd.DataFrame(overdue_rows).sort_values(
+        ["draws_since_seen", "number"], ascending=[False, True]
+    )
+    overdue_number = int(overdue_df.iloc[0]["number"])
+
+    col1, col2, col3 = st.columns(3)
+    col1.metric("🔥 Hot", hot_number)
+    col2.metric("❄️ Cold", cold_number)
+    col3.metric("⏳ Overdue", overdue_number)
+
+    freq_df = (
+        pd.DataFrame(
+            [{"number": number, "count": count} for number, count in number_counter.items()]
+        )
+        .sort_values("count", ascending=False)
+        .head(10)
+    )
+    st.markdown("### Top 10 Frequency")
+    st.bar_chart(freq_df, x="count", y="number", horizontal=True, use_container_width=True)
+
+    st.markdown("### Most Overdue Numbers")
+    st.dataframe(overdue_df.head(10), use_container_width=True, hide_index=True)
+
+    trend_df = filtered_df.copy()
+    trend_df["draw_date"] = trend_df["draw_date"].apply(format_uk_date)
+    trend_df["main_total"] = trend_df["numbers"].apply(lambda values: sum(values) if isinstance(values, list) else 0)
+    trend_df = trend_df.iloc[::-1]
+    st.markdown("### Recent Trend")
+    st.line_chart(trend_df.set_index("draw_date")[["main_total"]], use_container_width=True)
+
+
 @st.cache_data(show_spinner=False)
 def compute_insights(draws: list[dict], topn: int = 5):
     main_counter, star_counter = frequency_counter(draws)
@@ -200,7 +324,7 @@ jackpot_amount = jackpot_amount or "Jackpot unavailable"
 
 jackpot_html = ui_components.render_jackpot_card(
     jackpot_amount=jackpot_amount,
-    next_draw_date=meta.next_draw_date if meta.ok else None,
+    next_draw_date=format_uk_date(meta.next_draw_date) if meta.ok else None,
     next_draw_day=meta.next_draw_day if meta.ok else None,
 )
 
@@ -212,117 +336,104 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-left, main = st.columns([1, 2], gap="large")
+draws_df = pd.DataFrame(ordered_draws)
+if not draws_df.empty:
+    draws_df["draw_date"] = draws_df.apply(_draw_date_text, axis=1)
+draws_df = draws_df.reset_index(drop=True)
 
-with left:
-    st.subheader("Controls")
-    strategy = st.selectbox("Strategy", STRATEGIES, index=0)
-    line_count = st.slider("Number of lines", min_value=1, max_value=10, value=4)
-    max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=250, step=50)
-    topn = st.slider("Insight depth (Top N)", min_value=3, max_value=10, value=5)
-    generate = st.button("Generate Decision Lines 🎯", use_container_width=True, type="primary")
+tabs = st.tabs(["Picks", "Insights", "Tickets", "Home"])
 
-    st.caption("Optional filters")
-    include_last_draw = st.checkbox("Allow numbers from most recent draw", value=True)
+with tabs[0]:
+    left, main = st.columns([1, 2], gap="large")
 
-with main:
-    st.subheader("Generated Lines + Rationale")
-    st.write("Select a strategy and generate lines to view confidence scoring and reasoning.")
+    with left:
+        st.subheader("Controls")
+        strategy = st.selectbox("Strategy", STRATEGIES, index=0)
+        line_count = st.slider("Number of lines", min_value=1, max_value=10, value=4)
+        max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=250, step=50)
+        topn = st.slider("Insight depth (Top N)", min_value=3, max_value=10, value=5)
+        generate = st.button("Generate Decision Lines 🎯", use_container_width=True, type="primary")
 
-if generate:
-    with st.spinner("Fetching latest draw history..."):
-        if not all_draws:
-            try:
-                all_draws = fetch_draws()
-            except requests.RequestException as exc:
-                st.error("Could not fetch draw data right now. Please try again in a moment.")
-                st.caption(f"Technical details: {exc}")
-                st.stop()
-
-    draws = prepare_draws(all_draws, max_draws)
-    if not draws:
-        st.warning("No draw data available from the API.")
-        st.stop()
-
-    insights = compute_insights(draws, topn=topn)
-    main_counter: Counter = insights["main_counter"]
-    star_counter: Counter = insights["star_counter"]
-
-    last_draw_numbers = set(insights["recent"]["numbers"])
+        st.caption("Optional filters")
+        include_last_draw = st.checkbox("Allow numbers from most recent draw", value=True)
 
     with main:
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Draws loaded", len(draws))
-        m2.metric("Most frequent main", main_counter.most_common(1)[0][0])
-        m3.metric("Most frequent star", star_counter.most_common(1)[0][0])
+        st.subheader("Generated Lines + Rationale")
+        st.write("Select a strategy and generate lines to view confidence scoring and reasoning.")
 
-        st.markdown('<div class="em-results">', unsafe_allow_html=True)
-        for idx in range(1, line_count + 1):
-            nums, stars = build_line(strategy, main_counter, star_counter, draws)
+    if generate:
+        with st.spinner("Fetching latest draw history..."):
+            if not all_draws:
+                try:
+                    all_draws = fetch_draws()
+                except requests.RequestException as exc:
+                    st.error("Could not fetch draw data right now. Please try again in a moment.")
+                    st.caption(f"Technical details: {exc}")
+                    st.stop()
 
-            if not include_last_draw:
-                attempts = 0
-                while set(nums).intersection(last_draw_numbers) and attempts < 10:
-                    nums, stars = build_line(strategy, main_counter, star_counter, draws)
-                    attempts += 1
+        draws = prepare_draws(all_draws, max_draws)
+        if not draws:
+            st.warning("No draw data available from the API.")
+            st.stop()
 
-            score, explanation = explain_line(
-                nums,
-                stars,
-                main_counter=main_counter,
-                star_counter=star_counter,
-                main_gap=insights["main_gap"],
-                strategy=strategy,
-            )
+        insights = compute_insights(draws, topn=topn)
+        main_counter: Counter = insights["main_counter"]
+        star_counter: Counter = insights["star_counter"]
 
-            reasons = [*explanation[:3], f"Strategy used: {strategy}"]
+        last_draw_numbers = set(insights["recent"]["numbers"])
+
+        with main:
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Draws loaded", len(draws))
+            m2.metric("Most frequent main", main_counter.most_common(1)[0][0])
+            m3.metric("Most frequent star", star_counter.most_common(1)[0][0])
+
+            st.markdown('<div class="em-results">', unsafe_allow_html=True)
+            for idx in range(1, line_count + 1):
+                nums, stars = build_line(strategy, main_counter, star_counter, draws)
+
+                if not include_last_draw:
+                    attempts = 0
+                    while set(nums).intersection(last_draw_numbers) and attempts < 10:
+                        nums, stars = build_line(strategy, main_counter, star_counter, draws)
+                        attempts += 1
+
+                score, explanation = explain_line(
+                    nums,
+                    stars,
+                    main_counter=main_counter,
+                    star_counter=star_counter,
+                    main_gap=insights["main_gap"],
+                    strategy=strategy,
+                )
+
+                reasons = [*explanation[:3], f"Strategy used: {strategy}"]
+                st.markdown(
+                    render_result_card(
+                        line_index=idx,
+                        main_nums=nums,
+                        stars=stars,
+                        confidence=score,
+                        reasons=reasons,
+                    ),
+                    unsafe_allow_html=True,
+                )
+            st.markdown('</div>', unsafe_allow_html=True)
+
             st.markdown(
-                render_result_card(
-                    line_index=idx,
-                    main_nums=nums,
-                    stars=stars,
-                    confidence=score,
-                    reasons=reasons,
-                ),
+                '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
                 unsafe_allow_html=True,
             )
-        st.markdown('</div>', unsafe_allow_html=True)
 
-        st.markdown(
-            '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
-            unsafe_allow_html=True,
-        )
+with tabs[1]:
+    render_insights(draws_df)
 
-    st.divider()
-    st.subheader("Insights")
-    i1, i2, i3, i4 = st.columns(4)
+with tabs[2]:
+    st.subheader("Tickets")
+    st.caption("Save and track your generated lines here.")
 
-    with i1:
-        render_insight_card(
-            "Hot numbers",
-            f"Main: {', '.join(map(str, insights['hot_main']))}<br/>Stars: {', '.join(map(str, insights['hot_star']))}",
-            "🔥",
-        )
-    with i2:
-        render_insight_card(
-            "Cold numbers",
-            f"Main: {', '.join(map(str, insights['cold_main']))}<br/>Stars: {', '.join(map(str, insights['cold_star']))}",
-            "❄️",
-        )
-    with i3:
-        render_insight_card(
-            "Overdue",
-            f"Main: {', '.join(map(str, insights['overdue_main']))}<br/>Stars: {', '.join(map(str, insights['overdue_star']))}",
-            "⏳",
-        )
-    with i4:
-        recent = insights["recent"]
-        render_insight_card(
-            "Most recent draw",
-            f"Date: {recent['date']}<br/>Numbers: {', '.join(map(str, recent['numbers']))}<br/>Stars: {', '.join(map(str, recent['stars']))}",
-            "🕒",
-        )
-
-    st.subheader("Top Main Number Frequency")
-    freq_df = pd.DataFrame(main_counter.most_common(10), columns=["Number", "Frequency"]).set_index("Number")
-    st.bar_chart(freq_df)
+with tabs[3]:
+    st.subheader("Home")
+    st.caption("Generate smarter lines in Picks and explore performance trends in Insights.")
+    if most_recent:
+        st.metric("Last draw", format_uk_date(_draw_date_text(most_recent)))
