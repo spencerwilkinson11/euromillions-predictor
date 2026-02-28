@@ -1,419 +1,60 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
-/* =========================================================
-   TOKENS / DESIGN SYSTEM
-   ========================================================= */
 :root {
-  --bg: #071423;
   --panel: #0b1b2b;
-  --card: #0b1b2b;
   --text: #ffffff;
-  --muted: rgba(255,255,255,0.70);
-
   --accent: #ff4b4b;
-  --primary: #1e3a8a;
-  --gold: #ffd700;
-
-  --borderW: 2px;
   --radius: 12px;
-  --padY: 8px;
-  --padX: 16px;
+  --borderW: 2px;
 }
 
-html, body, [class*="css"] {
-  font-family: 'Inter', sans-serif;
-}
-
-.stApp {
-  background:
-    radial-gradient(circle at 8% 12%, rgba(56, 189, 248, 0.16), transparent 34%),
-    radial-gradient(circle at 80% 20%, rgba(99, 102, 241, 0.15), transparent 34%),
-    linear-gradient(180deg, #0a1222 0%, var(--bg) 100%);
-  color: var(--text);
-}
-
-.block-container {
-  padding-top: 0.55rem;
-  padding-bottom: 1rem;
-}
-
-/* =========================================================
-   APP WRAPPER
-   ========================================================= */
-.wl-app {
-  color: var(--text);
-}
-
-.wl-app h1, .wl-app h2, .wl-app h3, .wl-app h4,
-.wl-app p, .wl-app li, .wl-app span, .wl-app div,
-.wl-app label, .wl-app small,
-[data-testid="stMarkdownContainer"] p,
-[data-testid="stMarkdownContainer"] li,
-[data-testid="stCaptionContainer"],
-[data-testid="stWidgetLabel"] {
-  color: var(--text);
-}
-
-/* =========================================================
-   LINKS
-   ========================================================= */
-.wl-app a,
-.wl-app a:visited {
-  color: var(--text);
-  text-decoration: underline;
-}
-
-.wl-app a:hover,
-.wl-app a:active,
-.wl-app a:visited:hover {
-  color: #000000 !important;
-  background: transparent !important;
-}
-
-/* =========================================================
-   REUSABLE COMPONENTS
-   ========================================================= */
-.wl-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--panel);
-  color: var(--text);
-  border: var(--borderW) solid transparent;
-  border-radius: var(--radius);
-  padding: var(--padY) var(--padX);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  text-decoration: none;
-  font-weight: 800;
-}
-
-.wl-btn:hover {
-  border-color: var(--accent);
-  color: var(--text);
-}
-
-.wl-btn--active {
-  border-color: var(--accent);
-}
-
-.wl-btn--primary {
-  background: var(--primary);
-  color: #ffffff !important;
-  box-shadow: 0 10px 24px rgba(11, 27, 140, 0.35);
-}
-
-.wl-btn--primary:hover {
-  color: #ffffff !important;
-}
-
-.wl-balls,
-.number-ball-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-}
-
-.number-ball-set {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-
-.number-ball-divider {
-  color: var(--muted);
-  font-weight: 700;
-}
-
-.wl-ball {
-  width: 38px;
-  height: 38px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #fff;
-  border: 2px solid transparent;
-}
-
-.wl-ball--main {
-  background: #2563eb;
-}
-
-.wl-ball--star {
-  background: var(--gold);
-  color: #111827;
-}
-
-.wl-ball--matched {
-  outline: 3px solid var(--gold);
-  box-shadow: 0 0 0 2px rgba(255,215,0,0.35);
-}
-
-.wl-match-badge {
-  width: 44px;
-  height: 44px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  border: 2px solid var(--gold);
-  background: var(--panel);
-  color: var(--text);
-}
-
-.app-header { display: flex; align-items: center; gap: 10px; margin: 0 0 0.4rem 0; }
-.app-logo {
-  width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
-  font-size: 17px; font-weight: 800; letter-spacing: 0.04em; color: #f8fafc;
-  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 55%, #06b6d4 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25); box-shadow: 0 5px 14px rgba(59,130,246,0.35);
-}
-.app-header-copy { display: grid; gap: 0.05rem; }
-.app-title {
-  line-height: 1.08; margin: 0; font-size: clamp(1.55rem, 2.1vw, 2.15rem); font-weight: 800;
-  background: linear-gradient(90deg, #e2e8f0 0%, #93c5fd 40%, #a5b4fc 75%, #67e8f9 100%);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.app-subtitle { margin-top: 2px; font-size: 0.85rem; line-height: 1.2; color: var(--muted); }
-
-.last-result-banner {
-  margin: 0.4rem 0 1rem; border-radius: 1.1rem; border: 1px solid rgba(148, 163, 184, 0.3);
-  background: linear-gradient(125deg, rgba(15, 23, 42, 0.92), rgba(17, 27, 47, 0.84));
-  box-shadow: 0 18px 42px rgba(2, 6, 23, 0.34); padding: 1.15rem; display: flex; justify-content: space-between; gap: 1rem;
-}
-.last-result-main { flex: 1; }
-.last-result-brand { font-size: 0.74rem; letter-spacing: 0.15em; font-weight: 700; color: #93c5fd; }
-.last-result-main h2 { margin: 0.2rem 0 0; }
-.last-result-date { margin: 0.2rem 0 0.65rem; color: var(--muted); }
-.last-result-meta-row { margin-top: 0.7rem; display: flex; gap: 0.85rem; flex-wrap: wrap; }
-.last-result-meta-item {
-  border: 1px solid rgba(148, 163, 184, 0.28); border-radius: 0.7rem; background: rgba(15, 23, 42, 0.62);
-  padding: 0.35rem 0.6rem; display: inline-flex; align-items: baseline; gap: 0.45rem;
-}
-.meta-label { font-size: 0.74rem; color: #93c5fd; text-transform: uppercase; letter-spacing: 0.08em; }
-.last-result-right { display: flex; flex-direction: column; gap: 0.75rem; min-width: 260px; }
-
-.jackpot-card {
-  border-radius: 22px; background: linear-gradient(180deg, #f7b500 0%, #f5a800 100%); padding: 16px 16px 14px;
-  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.35); border: 1px solid rgba(11, 27, 140, 0.18); color: #0b1b8c;
-}
-.jackpot-brand { margin-top: 10px; font-weight: 900; font-size: 1.15rem; color: #0b1b8c; }
-.jackpot-amount { margin-top: 10px; font-weight: 900; font-size: clamp(1.8rem, 3.6vw, 2.6rem); line-height: 1.05; color: #0b1b8c; }
-.jackpot-meta { margin-top: 4px; font-size: 0.84rem; color: rgba(11, 27, 140, 0.85); font-weight: 700; }
-.jackpot-cta { margin-top: 16px; width: 100%; }
-
-.ticket-match-list { display: grid; gap: 0.5rem; margin-bottom: 0.8rem; }
-.ticket-match-line {
-  display: flex; align-items: center; justify-content: space-between; gap: 0.75rem;
-  background: rgba(15, 23, 42, 0.45); border: 1px solid rgba(148, 163, 184, 0.24); border-radius: 0.75rem; padding: 0.6rem;
-}
-.ticket-line-balls { margin: 0; }
-
-.disclaimer {
-  border-radius: 0.8rem; border: 1px solid rgba(148, 163, 184, 0.25); background: rgba(15, 23, 42, 0.75);
-  color: var(--muted); padding: 0.8rem; font-size: 0.9rem;
-}
-
-
-.insight-card { border: 1px solid rgba(148, 163, 184, 0.25); border-radius: 0.95rem; padding: 0.85rem; background: rgba(17, 27, 47, 0.82); }
-.insight-title { font-size: 0.92rem; font-weight: 700; margin-bottom: 0.45rem; display: flex; align-items: center; gap: 0.35rem; }
-.insight-icon { font-size: 1.02rem; }
-.insight-body { font-size: 0.9rem; color: var(--muted); line-height: 1.45; }
-
-.em-results { display: grid; gap: 0.75rem; margin-top: 0.35rem; }
-.em-card { background: rgba(255,255,255,0.08); border: 1px solid rgba(148,163,184,0.24); border-radius: 18px; padding: 16px; }
-.em-card-header { display: flex; align-items: center; justify-content: space-between; gap: 0.8rem; margin-bottom: 0.75rem; }
-.em-badge { border: 1px solid rgba(255,255,255,0.25); border-radius: 999px; padding: 0.22rem 0.6rem; }
-.em-meter { width: 100%; height: 0.52rem; border-radius: 999px; margin-top: 0.75rem; background: rgba(148,163,184,0.25); overflow: hidden; }
-.em-meter-fill { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #38bdf8, #3b82f6 55%, #6366f1); }
-.em-meter-label { margin-top: 0.4rem; color: rgba(255,255,255,0.76); font-size: 0.82rem; }
-.em-reasons { margin: 0.65rem 0 0; padding-left: 1.05rem; }
-.em-strategy { margin-top: 0.5rem; color: rgba(255,255,255,0.72); font-size: 0.8rem; }
-
-/* =========================================================
-   NAV: Streamlit segmented control (force dark segments)
-   ========================================================= */
-
-/* Force the whole segmented control area to be transparent */
-div[data-testid="stSegmentedControl"] {
-  background: transparent !important;
-}
-
-/* Force each segment button dark (unselected + selected) */
+/* NAV: force ALL segments dark, readable text */
 div[data-testid="stSegmentedControl"] button {
   background: var(--panel) !important;
   color: var(--text) !important;
   border: var(--borderW) solid transparent !important;
   border-radius: var(--radius) !important;
-  padding: var(--padY) var(--padX) !important;
 }
 
-/* Streamlit sometimes applies background to inner elements */
+/* Streamlit/BaseWeb sometimes paints inner elements */
 div[data-testid="stSegmentedControl"] button * {
   background: transparent !important;
   color: inherit !important;
 }
 
-/* Hover: red border, keep dark background */
+/* Hover */
 div[data-testid="stSegmentedControl"] button:hover {
+  border-color: var(--accent) !important;
   background: var(--panel) !important;
   color: var(--text) !important;
-  border-color: var(--accent) !important;
 }
 
-/* Active (selected): persistent red border */
+/* Active (persistent red border) — keep AFTER hover */
 div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
 div[data-testid="stSegmentedControl"] button[aria-selected="true"],
 div[data-testid="stSegmentedControl"] [aria-selected="true"] {
-  background: var(--panel) !important;
-  color: var(--text) !important;
   border-color: var(--accent) !important;
-}
-
-/* Remove any default light track/background around segments */
-div[data-testid="stSegmentedControl"] div,
-div[data-testid="stSegmentedControl"] span {
-  background: transparent !important;
-  color: var(--text) !important;
-}
-
-/* =========================================================
-   NAV SEGMENTED CONTROL — BASEWEB OVERRIDES (STRONG)
-   ========================================================= */
-
-/* BaseWeb button group wrapper / track */
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"],
-div[data-testid="stSegmentedControl"] [role="group"],
-div[data-testid="stSegmentedControl"] [role="radiogroup"] {
-  background: var(--panel) !important;
-  border-radius: var(--radius) !important;
-  padding: 2px !important;
-}
-
-/* Force every button to dark */
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button,
-div[data-testid="stSegmentedControl"] button {
   background: var(--panel) !important;
   color: var(--text) !important;
-  border: var(--borderW) solid transparent !important;
-  border-radius: calc(var(--radius) - 2px) !important;
 }
 
-/* BaseWeb often paints inner spans/divs white */
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button *,
-div[data-testid="stSegmentedControl"] button * {
-  background: transparent !important;
-  color: inherit !important;
-}
-
-/* Hover: red border, still dark */
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button:hover,
-div[data-testid="stSegmentedControl"] button:hover {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border-color: var(--accent) !important;
-}
-
-/* Active/selected: persistent red border (cover multiple Streamlit/BaseWeb states) */
-div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
-div[data-testid="stSegmentedControl"] button[aria-selected="true"],
-div[data-testid="stSegmentedControl"] [aria-selected="true"] button,
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button[aria-pressed="true"],
-div[data-testid="stSegmentedControl"] [data-baseweb="button-group"] button[aria-selected="true"] {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border-color: var(--accent) !important;
-}
-
-/* Kill default focus/outline that can add light rings */
-div[data-testid="stSegmentedControl"] button:focus,
-div[data-testid="stSegmentedControl"] button:focus-visible {
-  outline: none !important;
-  box-shadow: none !important;
-}
-
-/* LAST RESORT: If the “pill” still stays white, force any descendant div to transparent */
-div[data-testid="stSegmentedControl"] div,
-div[data-testid="stSegmentedControl"] span {
-  background-color: transparent !important;
-}
-
-/* =========================================================
-   NAV: Radio fallback (force dark labels)
-   ========================================================= */
-
+/* Radio fallback nav */
 div[role="radiogroup"] label {
   background: var(--panel) !important;
   color: var(--text) !important;
   border: var(--borderW) solid transparent !important;
   border-radius: var(--radius) !important;
-  padding: var(--padY) var(--padX) !important;
 }
-
 div[role="radiogroup"] label:hover {
-  background: var(--panel) !important;
   border-color: var(--accent) !important;
 }
-
 div[role="radiogroup"] input:checked + div,
 div[role="radiogroup"] input:checked + label {
-  background: var(--panel) !important;
   border-color: var(--accent) !important;
+  background: var(--panel) !important;
 }
 
-/* Kill grey focus rings */
+/* Kill focus glow that can look like light borders */
 div[data-testid="stSegmentedControl"] button:focus,
 div[role="radiogroup"] label:focus-within {
   outline: none !important;
   box-shadow: none !important;
-}
-
-/* =========================================================
-   STREAMLIT OVERRIDES
-   ========================================================= */
-div[data-testid="stButton"],
-div[data-testid="stDownloadButton"] { background: transparent !important; }
-
-.stButton > button,
-.stDownloadButton > button,
-button[kind="primary"],
-button[kind="secondary"] {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border: var(--borderW) solid rgba(255,255,255,0.12) !important;
-  border-radius: var(--radius) !important;
-  padding: 0.75rem 1rem !important;
-}
-
-.stButton > button:hover,
-.stDownloadButton > button:hover {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border-color: var(--accent) !important;
-}
-
-.stButton > button:disabled,
-.stDownloadButton > button:disabled {
-  background: rgba(11,27,43,0.65) !important;
-  color: rgba(255,255,255,0.55) !important;
-  border-color: rgba(255,255,255,0.08) !important;
-}
-
-.stTextInput input,
-.stTextArea textarea,
-.stSelectbox div[data-baseweb="select"] > div {
-  background: var(--panel) !important;
-  color: var(--text) !important;
-  border: 1px solid rgba(255,255,255,0.12) !important;
-}
-
-@media (max-width: 900px) {
-  .last-result-banner { flex-direction: column; }
-  .last-result-right { min-width: auto; width: 100%; }
-  .jackpot-card { min-width: auto; width: 100%; }
 }
