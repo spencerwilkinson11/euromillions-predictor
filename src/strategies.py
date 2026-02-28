@@ -15,13 +15,31 @@ STRATEGIES = [
 ]
 
 
+def _safe_int_list(values: list) -> list[int]:
+    safe_values: list[int] = []
+    for value in values:
+        try:
+            safe_values.append(int(value))
+        except (TypeError, ValueError):
+            continue
+    return safe_values
+
+
 def _weighted_unique_pick(counter: Counter, k: int, invert: bool = False) -> list[int]:
-    pool = dict(counter)
-    picked = []
+    pool: dict[int, int] = {}
+    for value, weight in dict(counter).items():
+        try:
+            value_int = int(value)
+            weight_int = int(weight)
+        except (TypeError, ValueError):
+            continue
+        pool[value_int] = max(1, weight_int)
+
+    picked: list[int] = []
 
     for _ in range(min(k, len(pool))):
         choices = list(pool.keys())
-        weights = [max(1, pool[c]) for c in choices]
+        weights = [pool[c] for c in choices]
         if invert:
             max_weight = max(weights)
             weights = [max_weight - w + 1 for w in weights]
@@ -59,14 +77,14 @@ def build_line(strategy: str, main_counter: Counter, star_counter: Counter, draw
         main_nums = _balanced_main_pick()
         stars = _balanced_star_pick()
     else:  # AI Mode (Blend)
-        hot_main = [n for n, _ in main_counter.most_common(12)]
+        hot_main = _safe_int_list([n for n, _ in main_counter.most_common(12)])
         overdue_main = [n for n, _ in sorted(main_gap.items(), key=lambda item: item[1], reverse=True)[:12]]
-        candidate_main = list(dict.fromkeys(hot_main[:6] + overdue_main[:6] + MAIN_RANGE))
+        candidate_main = sorted(set(hot_main[:6] + overdue_main[:6] + MAIN_RANGE))
         main_nums = sorted(random.sample(candidate_main, k=5))
 
-        hot_stars = [s for s, _ in star_counter.most_common(6)]
+        hot_stars = _safe_int_list([s for s, _ in star_counter.most_common(6)])
         overdue_stars = [s for s, _ in sorted(star_gap.items(), key=lambda item: item[1], reverse=True)[:6]]
-        candidate_stars = list(dict.fromkeys(hot_stars[:3] + overdue_stars[:3] + STAR_RANGE))
+        candidate_stars = sorted(set(hot_stars[:3] + overdue_stars[:3] + STAR_RANGE))
         stars = sorted(random.sample(candidate_stars, k=2))
 
     return main_nums, stars
@@ -80,17 +98,23 @@ def explain_line(
     main_gap: dict[int, int],
     strategy: str,
 ) -> tuple[int, list[str]]:
-    hot_main = {n for n, _ in main_counter.most_common(10)}
-    cold_main = {n for n, _ in sorted(main_counter.items(), key=lambda item: item[1])[:10]}
-    overdue_main = {n for n, _ in sorted(main_gap.items(), key=lambda item: item[1], reverse=True)[:10]}
+    safe_main_nums = sorted(_safe_int_list(main_nums))
+    safe_stars = sorted(_safe_int_list(stars))
 
-    hot_hits = len([n for n in main_nums if n in hot_main])
-    cold_hits = len([n for n in main_nums if n in cold_main])
-    overdue_hits = len([n for n in main_nums if n in overdue_main])
+    if len(safe_main_nums) < 2:
+        return 0, ["Not enough valid numbers to explain this line."]
 
-    low_count = len([n for n in main_nums if n <= 25])
-    spread = max(main_nums) - min(main_nums)
-    sequential_pairs = sum(1 for a, b in zip(main_nums, main_nums[1:]) if b - a == 1)
+    hot_main = set(_safe_int_list([n for n, _ in main_counter.most_common(10)]))
+    cold_main = set(_safe_int_list([n for n, _ in sorted(main_counter.items(), key=lambda item: item[1])[:10]]))
+    overdue_main = set(_safe_int_list([n for n, _ in sorted(main_gap.items(), key=lambda item: item[1], reverse=True)[:10]]))
+
+    hot_hits = len([n for n in safe_main_nums if n in hot_main])
+    cold_hits = len([n for n in safe_main_nums if n in cold_main])
+    overdue_hits = len([n for n in safe_main_nums if n in overdue_main])
+
+    low_count = len([n for n in safe_main_nums if n <= 25])
+    spread = max(safe_main_nums) - min(safe_main_nums)
+    sequential_pairs = sum(1 for a, b in zip(safe_main_nums, safe_main_nums[1:]) if b - a == 1)
 
     score = 55
     if 2 <= low_count <= 3:
@@ -124,9 +148,9 @@ def explain_line(
     elif strategy == "Cold Numbers":
         explanations.insert(0, "Leans into less frequent historical outcomes.")
 
-    if stars:
-        hot_stars = {s for s, _ in star_counter.most_common(4)}
-        star_hot_hits = len([s for s in stars if s in hot_stars])
+    if safe_stars:
+        hot_stars = set(_safe_int_list([s for s, _ in star_counter.most_common(4)]))
+        star_hot_hits = len([s for s in safe_stars if s in hot_stars])
         explanations.append(f"Lucky stars include {star_hot_hits} from the recent high-frequency group.")
 
     return score, explanations[:4]

@@ -22,9 +22,22 @@ def parse_draw_date(draw: dict) -> str:
 
 def flatten_draw_values(draws: Iterable[dict]) -> tuple[list[int], list[int]]:
     numbers, stars = [], []
+
+    def _coerce_int(value: object) -> int | None:
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return None
+
     for draw in draws:
-        numbers.extend(draw.get("numbers", []))
-        stars.extend(draw.get("stars", []))
+        for n in draw.get("numbers", []):
+            n_int = _coerce_int(n)
+            if n_int is not None:
+                numbers.append(n_int)
+        for s in draw.get("stars", []):
+            s_int = _coerce_int(s)
+            if s_int is not None:
+                stars.append(s_int)
     return numbers, stars
 
 
@@ -89,8 +102,18 @@ def recent_draw_summary(draws: list[dict]) -> dict:
         return {"date": "Unknown", "numbers": [], "stars": []}
 
     latest = draws[0]
+
+    def _sorted_ints(values: list | None) -> list[int]:
+        coerced: list[int] = []
+        for value in values or []:
+            try:
+                coerced.append(int(value))
+            except (TypeError, ValueError):
+                continue
+        return sorted(coerced)
+
     return {
         "date": parse_draw_date(latest),
-        "numbers": sorted(latest.get("numbers", [])),
-        "stars": sorted(latest.get("stars", [])),
+        "numbers": _sorted_ints(latest.get("numbers")),
+        "stars": _sorted_ints(latest.get("stars")),
     }

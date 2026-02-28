@@ -1,0 +1,1 @@
+"""EuroMillions predictor source package."""
