@@ -311,6 +311,20 @@ label, small,
   color: var(--muted) !important;
 }
 
+
+a:hover,
+a:active,
+a:visited:hover {
+  color: #000000 !important;
+  background: transparent !important;
+}
+
+.last-result-cta-button:hover,
+.jackpot-cta:hover,
+.jackpot-play:hover {
+  color: #000000 !important;
+}
+
 hr,
 [data-testid="stDivider"] {
   border-color: var(--card-border) !important;
@@ -842,6 +856,49 @@ hr,
   border-radius: 0.5rem;
   clip-path: polygon(50% 0%, 62% 35%, 100% 35%, 69% 57%, 82% 100%, 50% 72%, 18% 100%, 31% 57%, 0% 35%, 38% 35%);
   border: 1px solid rgba(180, 83, 9, 0.5);
+}
+
+.ball.matched {
+  outline: 3px solid #FFD700;
+  box-shadow: 0 0 0 2px rgba(255,215,0,0.35), 0 6px 16px rgba(2, 6, 23, 0.35);
+}
+
+.ticket-match-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+}
+
+.ticket-match-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 0.75rem;
+  padding: 0.6rem;
+}
+
+.ticket-line-balls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.match-count-badge {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #f8fafc;
+  background: #0b1b8c;
+  border: 2px solid #FFD700;
 }
 
 .disclaimer {
