@@ -73,11 +73,20 @@ def fetch_draws():
     return response.json()
 
 
-@st.cache_data(ttl=60 * 60)
+@st.cache_data(ttl=30 * 60)
 def fetch_national_lottery_euromillions_meta() -> dict:
     url = "https://www.national-lottery.co.uk/results/euromillions/draw-history/xml"
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/123.0.0.0 Safari/537.36"
+        ),
+        "Accept": "application/xml,text/xml",
+        "Referer": "https://www.national-lottery.co.uk/results/euromillions",
+    }
     try:
-        response = requests.get(url, timeout=15)
+        response = requests.get(url, headers=headers, timeout=15)
         response.raise_for_status()
         root = ET.fromstring(response.text)
 
@@ -94,23 +103,42 @@ def fetch_national_lottery_euromillions_meta() -> dict:
         if latest_draw is None:
             return {"ok": False}
 
+        next_estimated_jackpot_text = root.findtext(".//next-estimated-jackpot")
         jackpot_amount_text = latest_draw.findtext(".//game/jackpot-amount")
+        next_draw_date = root.findtext(".//next-draw-date") or latest_draw.findtext(".//game/next-draw-date")
         next_draw_day = latest_draw.findtext(".//game/next-draw-day")
 
         jackpot_amount = None
-        if jackpot_amount_text:
-            cleaned = jackpot_amount_text.replace(",", "").strip()
+        jackpot_candidate = next_estimated_jackpot_text or jackpot_amount_text
+        if jackpot_candidate:
+            cleaned = jackpot_candidate.replace(",", "").strip()
             if cleaned.isdigit():
                 jackpot_amount = int(cleaned)
 
         return {
             "ok": True,
             "jackpot_amount": jackpot_amount,
+            "next_draw_date": (next_draw_date or "").strip(),
             "next_draw_day": (next_draw_day or "").strip().title(),
             "source": url,
         }
     except Exception:
         return {"ok": False}
+
+
+def _fallback_jackpot_from_draw(draw: dict | None) -> int | None:
+    if not draw:
+        return None
+
+    for key in ("estimatedJackpot", "jackpot", "jackpotAmount", "topPrize", "jackpot_amount"):
+        raw = draw.get(key)
+        if raw in (None, ""):
+            continue
+        cleaned = "".join(ch for ch in str(raw) if ch.isdigit())
+        if cleaned:
+            return int(cleaned)
+
+    return None
 
 
 def normalize_draws(draws: list[dict] | None) -> list[dict]:
@@ -212,10 +240,14 @@ except requests.RequestException:
 ordered_draws = prepare_draws(all_draws, len(all_draws) if all_draws else 0)
 most_recent = ordered_draws[0] if ordered_draws else None
 meta = fetch_national_lottery_euromillions_meta()
-jackpot_html = (
-    ui_components.render_jackpot_card(meta.get("jackpot_amount"), meta.get("next_draw_day"))
-    if meta.get("ok")
-    else ui_components.render_jackpot_card(None, None)
+jackpot_amount = meta.get("jackpot_amount") if meta.get("ok") else None
+if jackpot_amount is None:
+    jackpot_amount = _fallback_jackpot_from_draw(most_recent)
+
+jackpot_html = ui_components.render_jackpot_card(
+    jackpot_amount=jackpot_amount,
+    next_draw_date=meta.get("next_draw_date") if meta.get("ok") else None,
+    next_draw_day=meta.get("next_draw_day") if meta.get("ok") else None,
 )
 st.markdown(
     render_last_result_banner(most_recent, brand_text="Wilkos LuckyLogic", jackpot_html=jackpot_html),

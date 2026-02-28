@@ -55,23 +55,22 @@ def _format_jackpot(value: object) -> str | None:
 def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS", jackpot_html: str = "") -> str:
     safe_brand_text = escape(brand_text)
     if not draw:
-        return f"""
-        <div class="last-result-banner">
-            <div class="last-result-main">
-                <div class="last-result-brand">{safe_brand_text}</div>
-                <h2>Last result</h2>
-                <p class="last-result-date">No draw data available right now.</p>
-            </div>
-            <div class="last-result-right">
-                <div class="last-result-cta-panel">
-                    <div class="last-result-cta-title">Are you a winner?</div>
-                    <a class="last-result-cta-button" href="https://www.national-lottery.co.uk/results/euromillions" target="_blank" rel="noopener noreferrer">Check results</a>
-                </div>
-                {jackpot_html}
-            </div>
-        </div>
-        """
-
+        return (
+            f'<div class="last-result-banner">'
+            f'<div class="last-result-main">'
+            f'<div class="last-result-brand">{safe_brand_text}</div>'
+            f'<h2>Last result</h2>'
+            f'<p class="last-result-date">No draw data available right now.</p>'
+            f'</div>'
+            f'<div class="last-result-right">'
+            f'<div class="last-result-cta-panel">'
+            f'<div class="last-result-cta-title">Are you a winner?</div>'
+            f'<a class="last-result-cta-button" href="https://www.national-lottery.co.uk/results/euromillions" target="_blank" rel="noopener noreferrer">Check results</a>'
+            f'</div>'
+            f'{jackpot_html}'
+            f'</div>'
+            f'</div>'
+        )
 
     main_numbers: list[int] = []
     for value in draw.get("numbers", []) or []:
@@ -106,51 +105,54 @@ def render_last_result_banner(draw: dict | None, brand_text: str = "EUROMILLIONS
     if formatted_jackpot:
         draw_meta += f'<div class="last-result-meta-item"><span class="meta-label">Jackpot</span><strong>{formatted_jackpot}</strong></div>'
 
-    return f"""
-    <div class="last-result-banner">
-        <div class="last-result-main">
-            <div class="last-result-brand">{safe_brand_text}</div>
-            <h2>Last result</h2>
-            <p class="last-result-date">{_format_draw_date(draw_date)}</p>
-            <div class="last-result-balls" aria-label="Latest winning numbers and lucky stars">
-                <div class="last-result-ball-row">{numbers_markup}</div>
-                <div class="last-result-stars-row">{stars_markup}</div>
-            </div>
-            <div class="last-result-meta-row">{draw_meta}</div>
-        </div>
-        <div class="last-result-right">
-            <div class="last-result-cta-panel">
-                <div class="last-result-cta-title">Are you a winner?</div>
-                <a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>
-            </div>
-            {jackpot_html}
-        </div>
-    </div>
-    """
+    return (
+        f'<div class="last-result-banner">'
+        f'<div class="last-result-main">'
+        f'<div class="last-result-brand">{safe_brand_text}</div>'
+        f'<h2>Last result</h2>'
+        f'<p class="last-result-date">{_format_draw_date(draw_date)}</p>'
+        f'<div class="last-result-balls" aria-label="Latest winning numbers and lucky stars">'
+        f'<div class="last-result-ball-row">{numbers_markup}</div>'
+        f'<div class="last-result-stars-row">{stars_markup}</div>'
+        f'</div>'
+        f'<div class="last-result-meta-row">{draw_meta}</div>'
+        f'</div>'
+        f'<div class="last-result-right">'
+        f'<div class="last-result-cta-panel">'
+        f'<div class="last-result-cta-title">Are you a winner?</div>'
+        f'<a class="last-result-cta-button" href="{draw_url}" target="_blank" rel="noopener noreferrer">Check results</a>'
+        f'</div>'
+        f'{jackpot_html}'
+        f'</div>'
+        f'</div>'
+    )
 
 
-
-def render_jackpot_card(jackpot_amount: int | None, next_draw_day: str | None) -> str:
-    amount_markup = "Jackpot"
+def render_jackpot_card(jackpot_amount: int | None, next_draw_date: str | None, next_draw_day: str | None) -> str:
+    amount_markup = "Jackpot unavailable"
     if isinstance(jackpot_amount, int) and jackpot_amount > 0:
-        amount_m = jackpot_amount / 1_000_000
-        amount_markup = f"£{int(round(amount_m))}M<span class='jackpot-asterisk'>*</span>"
+        amount_markup = f"£{jackpot_amount:,}"
 
-    day_text = "This " + (next_draw_day or "Draw")
+    draw_hint = None
+    if next_draw_date:
+        draw_hint = f"Next draw: {_format_draw_date(next_draw_date)}"
+    elif next_draw_day:
+        draw_hint = f"Next draw: {next_draw_day}"
+
     play_url = "https://www.national-lottery.co.uk/games/euromillions"
 
-    return f"""
-    <div class="jackpot-card" role="region" aria-label="Latest EuroMillions jackpot">
-      <div class="jackpot-top">
-        <div class="jackpot-day">{day_text}</div>
-        <div class="jackpot-rule"></div>
-      </div>
-      <div class="jackpot-brand">EUROMILLIONS<span class="jackpot-reg">®</span></div>
-      <div class="jackpot-amount">{amount_markup}</div>
-      <div class="jackpot-label">Jackpot</div>
-      <a class="jackpot-play" href="{play_url}" target="_blank" rel="noopener noreferrer">Play for £2.50</a>
-    </div>
-    """
+    return (
+        f'<div class="jackpot-card" role="region" aria-label="Latest EuroMillions jackpot">'
+        f'<div class="jackpot-top">'
+        f'<div class="jackpot-day">EUROMILLIONS<span class="jackpot-reg">®</span></div>'
+        f'<div class="jackpot-rule"></div>'
+        f'</div>'
+        f'<div class="jackpot-amount">{amount_markup}</div>'
+        f'<div class="jackpot-label">Estimated jackpot</div>'
+        f'<div class="jackpot-next">{draw_hint or "Next draw date unavailable"}</div>'
+        f'<a class="jackpot-play" href="{play_url}" target="_blank" rel="noopener noreferrer">Play for £2.50</a>'
+        f'</div>'
+    )
 
 def render_app_header(app_name: str = "Wilkos LuckyLogic", tagline: str = "Smarter EuroMillions picks") -> str:
     return f"""
@@ -500,6 +502,11 @@ hr,
   min-width: 260px;
 }
 
+.last-result-right > [data-testid="stMarkdownPre"],
+.last-result-right > .st-emotion-cache-acwcvw {
+  display: none !important;
+}
+
 @media (min-width: 980px) {
   .last-result-right {
     flex-direction: row;
@@ -589,9 +596,10 @@ hr,
 .jackpot-amount {
   margin-top: 10px;
   font-weight: 900;
-  font-size: 3.1rem;
-  line-height: 1;
+  font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+  line-height: 1.05;
   color: #0b1b8c;
+  word-break: break-word;
 }
 
 .jackpot-asterisk {
@@ -602,8 +610,15 @@ hr,
 .jackpot-label {
   margin-top: 8px;
   font-weight: 900;
-  font-size: 1.55rem;
+  font-size: 1rem;
   color: #0b1b8c;
+}
+
+.jackpot-next {
+  margin-top: 4px;
+  font-size: 0.84rem;
+  color: rgba(11, 27, 140, 0.85);
+  font-weight: 700;
 }
 
 .jackpot-play {
