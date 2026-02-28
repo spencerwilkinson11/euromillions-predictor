@@ -932,7 +932,18 @@ div[data-testid="stExpander"] summary {
 }
 
 /* ---------- NAV: Segmented control ---------- */
-div[data-testid="stSegmentedControl"] button {
+div[data-testid="stSegmentedControl"],
+div[data-testid="stSegmentedControl"] > div,
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] {
+  background: transparent !important;
+}
+
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] {
+  gap: 0.45rem;
+}
+
+div[data-testid="stSegmentedControl"] button,
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button {
   background: #0b1b2b !important;
   color: #ffffff !important;
   border: 2px solid transparent !important;
@@ -941,13 +952,15 @@ div[data-testid="stSegmentedControl"] button {
 }
 
 /* keep dark on hover */
-div[data-testid="stSegmentedControl"] button:hover {
+div[data-testid="stSegmentedControl"] button:hover,
+div[data-testid="stSegmentedControl"] div[data-baseweb="button-group"] button:hover {
   background: #0b1b2b !important;
   color: #ffffff !important;
 }
 
 /* active item gets red border */
 div[data-testid="stSegmentedControl"] button[aria-pressed="true"],
+div[data-testid="stSegmentedControl"] button[aria-selected="true"],
 div[data-testid="stSegmentedControl"] [aria-selected="true"] {
   border: 2px solid #ff4b4b !important;
   background: #0b1b2b !important;
@@ -955,7 +968,13 @@ div[data-testid="stSegmentedControl"] [aria-selected="true"] {
 }
 
 /* ---------- NAV: Radio fallback (horizontal) ---------- */
-div[role="radiogroup"] label {
+div[role="radiogroup"],
+div[role="radiogroup"] > div {
+  background: transparent !important;
+}
+
+div[role="radiogroup"] label,
+div[role="radiogroup"] label > div {
   background: #0b1b2b !important;
   color: #ffffff !important;
   border: 2px solid transparent !important;
@@ -964,14 +983,17 @@ div[role="radiogroup"] label {
 }
 
 /* keep dark on hover */
-div[role="radiogroup"] label:hover {
+div[role="radiogroup"] label:hover,
+div[role="radiogroup"] label:hover > div {
   background: #0b1b2b !important;
   color: #ffffff !important;
 }
 
 /* active gets red border (radio DOM varies; cover both patterns) */
 div[role="radiogroup"] input:checked + div,
-div[role="radiogroup"] input:checked + label {
+div[role="radiogroup"] input:checked + label,
+div[role="radiogroup"] label[data-checked="true"],
+div[role="radiogroup"] label[data-checked="true"] > div {
   border: 2px solid #ff4b4b !important;
   background: #0b1b2b !important;
   color: #ffffff !important;
