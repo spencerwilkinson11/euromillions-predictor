@@ -1,6 +1,8 @@
 from collections import Counter
 from datetime import datetime, timezone
 from typing import Callable
+import json
+import uuid
 
 import pandas as pd
 import requests
@@ -10,6 +12,7 @@ from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, 
 from src.jackpot_service import get_live_jackpot
 from src.strategies import STRATEGIES, build_line, explain_line
 from src import ui_components
+from src.ticket_storage import load_tickets_from_localstorage, save_tickets_to_localstorage, deserialize_tickets
 
 
 def _resolve_ui_function(*names: str) -> Callable | None:
@@ -182,6 +185,54 @@ def _draw_date_text(draw: dict) -> str:
     return ""
 
 
+
+
+def _safe_ticket_lines(lines: list[dict] | None) -> list[dict]:
+    validated: list[dict] = []
+    for line in lines or []:
+        if not isinstance(line, dict):
+            continue
+
+        main_numbers = line.get("main", [])
+        stars = line.get("stars", [])
+
+        if not isinstance(main_numbers, list) or not isinstance(stars, list):
+            continue
+
+        try:
+            main_numbers = sorted(int(v) for v in main_numbers)
+            stars = sorted(int(v) for v in stars)
+        except (TypeError, ValueError):
+            continue
+
+        validated.append({"main": main_numbers, "stars": stars})
+
+    return validated
+
+
+def _new_ticket(lines: list[dict], strategy: str) -> dict:
+    return {
+        "id": str(uuid.uuid4()),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "draw_date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
+        "strategy": strategy,
+        "lines": _safe_ticket_lines(lines),
+        "status": "Pending",
+        "notes": "",
+    }
+
+
+def _ensure_ticket_state() -> None:
+    if "tickets" in st.session_state:
+        return
+
+    loaded_tickets = load_tickets_from_localstorage()
+    st.session_state["tickets"] = loaded_tickets if isinstance(loaded_tickets, list) else []
+
+
+def _persist_tickets() -> None:
+    save_tickets_to_localstorage(st.session_state.get("tickets", []))
+
 def render_insights(draws_df: pd.DataFrame) -> None:
     st.subheader("Insights")
     if draws_df.empty:
@@ -301,6 +352,7 @@ def compute_insights(draws: list[dict], topn: int = 5):
     }
 
 
+_ensure_ticket_state()
 st.markdown(app_styles(), unsafe_allow_html=True)
 if _render_app_header:
     st.markdown(_render_app_header(app_name="Wilkos LuckyLogic", tagline="Smarter EuroMillions picks"), unsafe_allow_html=True)
@@ -382,6 +434,8 @@ with tab_picks:
 
         last_draw_numbers = set(insights["recent"]["numbers"])
 
+        generated_lines: list[dict] = []
+
         with main:
             m1, m2, m3 = st.columns(3)
             m1.metric("Draws loaded", len(draws))
@@ -407,6 +461,7 @@ with tab_picks:
                     strategy=strategy,
                 )
 
+                generated_lines.append({"main": nums, "stars": stars})
                 reasons = [*explanation[:3], f"Strategy used: {strategy}"]
                 st.markdown(
                     render_result_card(
@@ -420,6 +475,12 @@ with tab_picks:
                 )
             st.markdown('</div>', unsafe_allow_html=True)
 
+            if st.button("Save generated lines as ticket 🎟️", use_container_width=True):
+                ticket = _new_ticket(lines=generated_lines, strategy=strategy)
+                st.session_state["tickets"].append(ticket)
+                _persist_tickets()
+                st.success("Ticket saved on this device.")
+
             st.markdown(
                 '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
                 unsafe_allow_html=True,
@@ -431,3 +492,55 @@ with tab_insights:
 with tab_tickets:
     st.subheader("Tickets")
     st.caption("Save and track your generated lines here.")
+    st.caption("Tickets are saved on this device (no login).")
+
+    export_payload = json.dumps(st.session_state["tickets"], indent=2)
+    export_col, import_col = st.columns(2)
+    with export_col:
+        st.download_button(
+            "Export tickets (JSON)",
+            data=export_payload,
+            file_name="wilkos_luckylogic_tickets.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+    with import_col:
+        uploaded_file = st.file_uploader("Import tickets JSON", type=["json"], label_visibility="collapsed")
+        if uploaded_file is not None:
+            imported_text = uploaded_file.getvalue().decode("utf-8", errors="ignore")
+            imported_tickets = deserialize_tickets(imported_text)
+            if imported_tickets:
+                st.session_state["tickets"] = imported_tickets
+                _persist_tickets()
+                st.success(f"Imported {len(imported_tickets)} ticket(s).")
+            else:
+                st.warning("Import file was empty or invalid JSON list.")
+
+    tickets = st.session_state.get("tickets", [])
+    if not tickets:
+        st.info("No tickets saved yet. Go to Picks to generate lines and save a ticket.")
+        if st.button("Go to Picks"):
+            st.toast("Open the Picks tab to generate lines.")
+    else:
+        if st.button("Clear all tickets", type="secondary"):
+            st.session_state["tickets"] = []
+            _persist_tickets()
+            st.success("All tickets cleared.")
+
+        for index, ticket in enumerate(reversed(tickets), start=1):
+            created_at = format_uk_date(ticket.get("created_at"))
+            with st.expander(f"Ticket {index} • {ticket.get('strategy', 'Unknown strategy')} • {created_at}"):
+                st.write(f"Status: {ticket.get('status', 'Pending')}")
+                lines = _safe_ticket_lines(ticket.get("lines", []))
+                for line_idx, line in enumerate(lines, start=1):
+                    st.markdown(
+                        f"**Line {line_idx}:** Main {', '.join(map(str, line['main']))} | Stars {', '.join(map(str, line['stars']))}"
+                    )
+
+                delete_key = f"delete_ticket_{ticket.get('id', index)}"
+                if st.button("Delete ticket", key=delete_key):
+                    st.session_state["tickets"] = [t for t in st.session_state["tickets"] if t.get("id") != ticket.get("id")]
+                    _persist_tickets()
+                    st.success("Ticket deleted.")
+                    st.rerun()
