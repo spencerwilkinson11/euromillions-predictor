@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from html import escape
 
 import streamlit as st
 
@@ -146,6 +147,56 @@ def render_insight_card(title: str, body: str, icon: str = "") -> None:
         """,
         unsafe_allow_html=True,
     )
+
+
+def render_result_card(
+    line_index: int,
+    main_nums: list[int],
+    stars: list[int],
+    confidence: int,
+    reasons: list[str],
+) -> str:
+    safe_confidence = max(0, min(100, int(confidence)))
+    index = max(1, int(line_index))
+
+    main_markup = "".join([f'<span class="premium-ball em-ball em-ball-main">{int(value)}</span>' for value in main_nums])
+    stars_markup = "".join([f'<span class="premium-ball premium-star em-ball em-ball-star"><span>{int(value)}</span></span>' for value in stars])
+
+    strategy_label: str | None = None
+    display_reasons: list[str] = []
+    for reason in reasons:
+        text = str(reason).strip()
+        if not text:
+            continue
+        if text.lower().startswith("strategy used:"):
+            strategy_label = text.split(":", 1)[1].strip() or None
+            continue
+        if len(display_reasons) < 3:
+            display_reasons.append(text)
+
+    reason_markup = "".join([f"<li>{escape(reason)}</li>" for reason in display_reasons])
+    strategy_markup = (
+        f'<div class="em-strategy">Strategy used: <strong>{escape(strategy_label)}</strong></div>' if strategy_label else ""
+    )
+
+    return f"""
+    <article class="em-card" style="--em-card-delay: {index * 70}ms" aria-label="Generated line {index}">
+        <div class="em-card-header">
+            <div class="em-card-title">Line {index}</div>
+            <span class="em-badge" aria-label="Confidence {safe_confidence} out of 100">{safe_confidence}/100</span>
+        </div>
+        <div class="em-balls" aria-label="Main numbers and lucky stars">
+            <div class="em-balls-main">{main_markup}</div>
+            <div class="em-balls-stars">{stars_markup}</div>
+        </div>
+        <div class="em-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{safe_confidence}" aria-label="Confidence {safe_confidence} out of 100">
+            <span class="em-meter-fill" style="width: {safe_confidence}%;"></span>
+        </div>
+        <div class="em-meter-label">Confidence {safe_confidence}/100</div>
+        <ul class="em-reasons">{reason_markup}</ul>
+        {strategy_markup}
+    </article>
+    """
 
 
 def app_styles() -> str:
@@ -433,6 +484,124 @@ hr,
   box-shadow: 0 6px 16px rgba(2, 6, 23, 0.35);
 }
 
+.em-results {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.em-card {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 26px rgba(2, 6, 23, 0.18);
+  animation: emFadeIn 0.45s ease both;
+  animation-delay: var(--em-card-delay, 0ms);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.em-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px rgba(2, 6, 23, 0.28);
+}
+
+.em-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.em-card-title {
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.em-badge {
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+  padding: 0.22rem 0.6rem;
+  color: #e2e8f0;
+  background: rgba(15, 23, 42, 0.58);
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.em-balls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.em-balls-main,
+.em-balls-stars {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.em-ball {
+  width: 2rem;
+  height: 2rem;
+  font-size: 0.85rem;
+}
+
+.em-meter {
+  width: 100%;
+  height: 0.52rem;
+  border-radius: 999px;
+  margin-top: 0.75rem;
+  background: rgba(148, 163, 184, 0.25);
+  overflow: hidden;
+}
+
+.em-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #38bdf8, #3b82f6 55%, #6366f1);
+}
+
+.em-meter-label {
+  margin-top: 0.4rem;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.82rem;
+}
+
+.em-reasons {
+  margin: 0.65rem 0 0;
+  padding-left: 1.05rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.em-reasons li {
+  margin-bottom: 0.2rem;
+}
+
+.em-strategy {
+  margin-top: 0.5rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.8rem;
+}
+
+@keyframes emFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .ball.star {
   background: linear-gradient(180deg, #fde68a, #f59e0b);
   color: #1f2937;
@@ -555,7 +724,8 @@ div[data-baseweb="popover"] ul[role="listbox"] [role="option"][aria-disabled="tr
 @media (prefers-reduced-motion: reduce) {
   .last-result-cta-button,
   .premium-ball,
-  .premium-star {
+  .premium-star,
+  .em-card {
     animation: none !important;
     transition: none !important;
   }
