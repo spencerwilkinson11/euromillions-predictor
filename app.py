@@ -1,7 +1,6 @@
 from collections import Counter
 from datetime import date, datetime, timezone
 from html import escape
-from pathlib import Path
 import importlib
 from typing import Callable
 import json
@@ -11,12 +10,14 @@ import pandas as pd
 import requests
 import streamlit as st
 
-from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
-from src.date_utils import format_uk_date
-from src.draw_dates import format_uk_draw_label, is_draw_day, next_draw_date, upcoming_draw_dates
+from src.core.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
+from src.core.date_utils import format_uk_date
+from src.core.draw_dates import format_uk_draw_label, is_draw_day, next_draw_date, upcoming_draw_dates
 from src.jackpot_service import get_live_jackpot
-from src.strategies import STRATEGIES, build_line, explain_line
-from src.ticket_storage import load_tickets_from_localstorage, save_tickets_to_localstorage
+from src.core.strategies import STRATEGIES, build_line, explain_line
+from src.services.draws_provider import fetch_draws as fetch_draws_service
+from src.services.ticket_store import load_tickets_from_localstorage, save_tickets_to_localstorage
+from src.ui_streamlit.css import inject_css
 
 try:
     ui_components = importlib.import_module("src.ui_components")
@@ -36,18 +37,11 @@ def _resolve_ui_function(*names: str) -> Callable | None:
     return None
 
 
-_app_styles = _resolve_ui_function("app_styles")
 _render_insight_card = _resolve_ui_function("render_insight_card")
 _render_last_result_banner = _resolve_ui_function("render_last_result_banner", "render_last_result")
 _render_result_card = _resolve_ui_function("render_result_card")
 _render_app_header = _resolve_ui_function("render_app_header")
 _render_number_balls = _resolve_ui_function("render_number_balls")
-
-
-def app_styles() -> str:
-    if _app_styles:
-        return _app_styles()
-    return ""
 
 
 def render_last_result_banner(draw: dict | None, brand_text: str = "Wilkos LuckyLogic", jackpot_html: str = "") -> str:
@@ -100,23 +94,6 @@ def render_number_balls(
     return f"<div>{main_markup} + {stars_markup}</div>"
 
 st.set_page_config(page_title="Wilkos LuckyLogic", layout="wide")
-
-def inject_css() -> None:
-    css_path = Path(__file__).parent / "src" / "styles" / "app.css"
-    if css_path.exists():
-        css = css_path.read_text(encoding="utf-8")
-        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
-    else:
-        st.warning(f"CSS file not found: {css_path}")
-
-@st.cache_data(ttl=60 * 60)
-def fetch_draws():
-    """Fetch draw history from the public API."""
-    url = "https://euromillions.api.pedromealha.dev/v1/draws"
-    response = requests.get(url, timeout=10)
-    response.raise_for_status()
-    return response.json()
-
 
 @st.cache_data(ttl=30 * 60)
 def cached_jackpot():
@@ -495,7 +472,7 @@ else:
     st.caption("Smarter EuroMillions picks")
 
 try:
-    all_draws = fetch_draws()
+    all_draws = fetch_draws_service()
 except requests.RequestException:
     all_draws = []
 
@@ -637,7 +614,7 @@ if st.session_state["page"] == "Picks":
         with st.spinner("Fetching latest draw history..."):
             if not all_draws:
                 try:
-                    all_draws = fetch_draws()
+                    all_draws = fetch_draws_service()
                 except requests.RequestException as exc:
                     st.error("Could not fetch draw data right now. Please try again in a moment.")
                     st.caption(f"Technical details: {exc}")

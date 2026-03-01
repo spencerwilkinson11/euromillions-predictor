@@ -2,3 +2,5 @@ streamlit
 requests
 pandas
 streamlit-js-eval
+fastapi
+uvicorn

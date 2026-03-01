@@ -33,35 +33,6 @@ html, body, [class*="css"] {
 }
 
 
-.stApp [data-testid="stVerticalBlock"],
-.stApp [data-testid="stHorizontalBlock"],
-.stApp [data-testid="stColumn"],
-.stApp [data-testid="stMarkdownContainer"],
-.stApp [data-testid="stMetric"],
-.stApp [data-testid="stExpander"],
-.stApp [data-testid="stContainer"],
-.stApp [data-testid="stForm"],
-.stApp [data-testid="stToolbar"] {
-  background: transparent !important;
-}
-
-.stApp [data-baseweb="card"],
-.stApp [data-baseweb="popover"],
-.stApp [data-baseweb="menu"],
-.stApp [data-baseweb="select"],
-.stApp [data-baseweb="button"] {
-  background-color: transparent !important;
-}
-
-.stApp .element-container,
-.stApp .stMarkdown,
-.stApp .stMarkdown > div {
-  background: transparent !important;
-}
-
-.stApp [data-testid="stContainer"] {
-  background: rgba(11, 27, 43, 0) !important;
-}
 .block-container {
   padding-top: 0.55rem;
   padding-bottom: 1rem;
@@ -273,11 +244,6 @@ html, body, [class*="css"] {
    NAV: Streamlit segmented control (force dark segments)
    ========================================================= */
 
-/* Force the whole segmented control area to be transparent */
-div[data-testid="stSegmentedControl"] {
-  background: transparent !important;
-}
-
 /* Force each segment button dark (unselected + selected) */
 div[data-testid="stSegmentedControl"] button {
   background: var(--panel) !important;
@@ -307,13 +273,6 @@ div[data-testid="stSegmentedControl"] [aria-selected="true"] {
   background: var(--panel) !important;
   color: var(--text) !important;
   border-color: var(--accent) !important;
-}
-
-/* Remove any default light track/background around segments */
-div[data-testid="stSegmentedControl"] div,
-div[data-testid="stSegmentedControl"] span {
-  background: transparent !important;
-  color: var(--text) !important;
 }
 
 /* =========================================================
@@ -369,12 +328,6 @@ div[data-testid="stSegmentedControl"] button:focus,
 div[data-testid="stSegmentedControl"] button:focus-visible {
   outline: none !important;
   box-shadow: none !important;
-}
-
-/* LAST RESORT: If the “pill” still stays white, force any descendant div to transparent */
-div[data-testid="stSegmentedControl"] div,
-div[data-testid="stSegmentedControl"] span {
-  background-color: transparent !important;
 }
 
 /* =========================================================

@@ -16,10 +16,24 @@ An AI-styled Streamlit app that creates EuroMillions lines from historical draws
 - Draw-count control for history window and optional filter to avoid latest draw numbers
 - Styled number and star balls with summary metrics
 
-## Run locally
+## Architecture
+
+- `core/` → pure logic (portable to backend/iOS)
+- `services/` → external data providers
+- `ui_streamlit/` → Streamlit UI only
+- `api_fastapi/` → backend API layer
+
+## Running locally
+
+Streamlit:
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+FastAPI:
+```bash
+uvicorn src.api_fastapi.main:app --reload
 ```
 
 ## Notes

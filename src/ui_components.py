@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 from src.date_utils import format_uk_date
 from html import escape
 
@@ -241,11 +239,3 @@ def render_result_card(
     </article>
     """
 
-
-def app_styles() -> str:
-    css_path = Path(__file__).resolve().parent / "styles" / "app.css"
-    if not css_path.exists():
-        return ""
-
-    css = css_path.read_text(encoding="utf-8")
-    return f"<style>{css}</style>"
