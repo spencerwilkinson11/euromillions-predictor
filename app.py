@@ -1,5 +1,5 @@
 from collections import Counter
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from html import escape
 from typing import Callable
 import json
@@ -11,6 +11,7 @@ import streamlit as st
 
 from src.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
 from src.date_utils import format_uk_date
+from src.draw_dates import format_uk_draw_label, is_draw_day, next_draw_date, upcoming_draw_dates
 from src.jackpot_service import get_live_jackpot
 from src.strategies import STRATEGIES, build_line, explain_line
 from src import ui_components
@@ -206,25 +207,6 @@ def _as_iso_date(value: object) -> str | None:
         return None
 
 
-def upcoming_draw_dates(seed_iso: str | None, count: int = 6) -> list[date]:
-    draw_days = {1, 4}  # Tuesday, Friday
-    base_date = datetime.now(timezone.utc).date()
-    parsed_seed = _as_iso_date(seed_iso)
-    if parsed_seed:
-        base_date = date.fromisoformat(parsed_seed)
-
-    cursor = base_date
-    draw_dates: list[date] = []
-    while len(draw_dates) < count:
-        if cursor.weekday() in draw_days and cursor not in draw_dates:
-            draw_dates.append(cursor)
-        cursor += timedelta(days=1)
-
-    return draw_dates
-
-
-
-
 def _safe_ticket_lines(lines: list[dict] | None) -> list[dict]:
     validated: list[dict] = []
     for line in lines or []:
@@ -248,13 +230,12 @@ def _safe_ticket_lines(lines: list[dict] | None) -> list[dict]:
     return validated
 
 
-def _new_ticket(lines: list[dict], strategy: str) -> dict:
-    default_draw_date = datetime.now(timezone.utc).date().isoformat()
+def _new_ticket(lines: list[dict], strategy: str, draw_date_iso: str, draw_label: str) -> dict:
     return {
         "id": str(uuid.uuid4()),
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "draw_date": default_draw_date,
-        "draw_label": format_uk_date(default_draw_date),
+        "draw_date": draw_date_iso,
+        "draw_label": draw_label,
         "strategy": strategy,
         "lines": _safe_ticket_lines(lines),
         "status": "Pending",
@@ -262,22 +243,34 @@ def _new_ticket(lines: list[dict], strategy: str) -> dict:
     }
 
 
-def _render_ticket_line_with_matches(line: dict, winning_mains: set[int], winning_stars: set[int]) -> str:
+def _render_ticket_line_with_matches(
+    line: dict,
+    winning_mains: set[int],
+    winning_stars: set[int],
+    *,
+    should_check_matches: bool,
+    pending_label: str | None = None,
+) -> str:
     mains = line.get("main", [])
     stars = line.get("stars", [])
 
     balls_markup = render_number_balls(
         mains,
         stars,
-        matched_mains=(set(mains) & winning_mains),
-        matched_stars=(set(stars) & winning_stars),
+        matched_mains=(set(mains) & winning_mains) if should_check_matches else set(),
+        matched_stars=(set(stars) & winning_stars) if should_check_matches else set(),
     )
 
-    matches = sum(1 for value in mains if value in winning_mains) + sum(1 for value in stars if value in winning_stars)
+    matches = (
+        sum(1 for value in mains if value in winning_mains) + sum(1 for value in stars if value in winning_stars)
+        if should_check_matches
+        else "—"
+    )
+    pending_markup = f'<div class="ticket-pending-label">{escape(pending_label)}</div>' if pending_label else ""
     return (
         '<div class="ticket-match-line">'
         f'<div class="ticket-line-balls">{balls_markup}</div>'
-        f'<div class="wl-match-badge">{matches}</div>'
+        f'<div class="ticket-line-meta"><div class="wl-match-badge">{matches}</div>{pending_markup}</div>'
         '</div>'
     )
 
@@ -312,8 +305,18 @@ def render_your_tickets_section(most_recent_draw: dict | None) -> None:
         )
 
         st.markdown(f"**{strategy}** · {draw_label} · Created {created_at}")
+        pending_label = None if draw_matches_latest else f"Pending (Draw: {draw_label})"
         lines_markup = "".join(
-            [_render_ticket_line_with_matches(line, winning_mains=winning_mains, winning_stars=winning_stars) for line in lines]
+            [
+                _render_ticket_line_with_matches(
+                    line,
+                    winning_mains=winning_mains,
+                    winning_stars=winning_stars,
+                    should_check_matches=draw_matches_latest,
+                    pending_label=pending_label,
+                )
+                for line in lines
+            ]
         )
         st.markdown(f'<div class="ticket-match-list">{lines_markup}</div>', unsafe_allow_html=True)
 
@@ -464,7 +467,8 @@ def compute_insights(draws: list[dict], topn: int = 5):
 
 
 _ensure_ticket_state()
-st.markdown(app_styles(), unsafe_allow_html=True)
+# Load app CSS once at app startup so every page uses the same theme styles.
+st.markdown(f"<style>{app_styles()}</style>", unsafe_allow_html=True)
 st.markdown('<div class="wl-app">', unsafe_allow_html=True)
 if _render_app_header:
     st.markdown(_render_app_header(app_name="Wilkos LuckyLogic", tagline="Smarter EuroMillions picks"), unsafe_allow_html=True)
@@ -492,15 +496,17 @@ jackpot_html = ui_components.render_jackpot_card(
     next_draw_day=None,
 )
 
-draw_dates = upcoming_draw_dates(meta.next_draw_date if meta.ok else None)
-draw_options = [{"label": format_uk_date(d), "value": d.isoformat()} for d in draw_dates]
+draw_seed_iso = _as_iso_date(meta.next_draw_date if meta.ok else None)
+draw_seed = date.fromisoformat(draw_seed_iso) if draw_seed_iso else next_draw_date(datetime.now(timezone.utc).date())
+draw_dates = upcoming_draw_dates(draw_seed, weeks=12)
+draw_options = [{"label": format_uk_draw_label(d), "value": d.isoformat()} for d in draw_dates]
 selected_iso = st.session_state.get("selected_draw_date")
 option_values = [option["value"] for option in draw_options]
 if selected_iso not in option_values:
-    selected_iso = draw_options[0]["value"] if draw_options else datetime.now(timezone.utc).date().isoformat()
+    selected_iso = draw_options[0]["value"] if draw_options else None
 
 draw_option_map = {option["label"]: option["value"] for option in draw_options}
-selected_label = next((option["label"] for option in draw_options if option["value"] == selected_iso), format_uk_date(selected_iso))
+selected_label = next((option["label"] for option in draw_options if option["value"] == selected_iso), "")
 st.session_state["selected_draw_date"] = selected_iso
 st.session_state["selected_draw_label"] = selected_label
 
@@ -550,19 +556,36 @@ if st.session_state["page"] == "Picks":
 
     with left:
         st.subheader("Controls")
+        draw_labels = list(draw_option_map.keys())
+        default_draw_index = 0
+        if draw_option_map and st.session_state.get("selected_draw_date") in draw_option_map.values():
+            default_draw_index = list(draw_option_map.values()).index(st.session_state["selected_draw_date"])
+
         selected_draw_label = st.selectbox(
             "Draw date",
-            options=list(draw_option_map.keys()),
-            index=list(draw_option_map.values()).index(st.session_state["selected_draw_date"]),
+            options=draw_labels,
+            index=default_draw_index,
+            disabled=not draw_labels,
         )
-        st.session_state["selected_draw_label"] = selected_draw_label
-        st.session_state["selected_draw_date"] = draw_option_map[selected_draw_label]
+        if draw_option_map and selected_draw_label:
+            st.session_state["selected_draw_label"] = selected_draw_label
+            st.session_state["selected_draw_date"] = draw_option_map[selected_draw_label]
 
         strategy = st.selectbox("Strategy", STRATEGIES, index=0)
         line_count = st.slider("Number of lines", min_value=1, max_value=10, value=4)
         max_draws = st.slider("Historical draws to use", min_value=50, max_value=500, value=250, step=50)
         topn = st.slider("Insight depth (Top N)", min_value=3, max_value=10, value=5)
-        generate = st.button("Generate Decision Lines 🎯", use_container_width=True, type="primary")
+        selected_draw_date_iso = st.session_state.get("selected_draw_date")
+        selected_draw_date_obj = date.fromisoformat(selected_draw_date_iso) if selected_draw_date_iso else None
+        draw_date_valid = bool(selected_draw_date_obj and is_draw_day(selected_draw_date_obj))
+        if not draw_date_valid:
+            st.info("Select a draw date (Tue/Fri) to generate picks.")
+        generate = st.button(
+            "Generate Decision Lines 🎯",
+            use_container_width=True,
+            type="primary",
+            disabled=not draw_date_valid,
+        )
 
         st.caption("Optional filters")
         include_last_draw = st.checkbox("Allow numbers from most recent draw", value=True)
@@ -575,16 +598,22 @@ if st.session_state["page"] == "Picks":
         if last_generated and isinstance(last_generated.get("lines"), list):
             st.caption("Your last generated set is ready to save.")
             if st.button("💾 Save as Ticket", use_container_width=True, type="secondary"):
-                ticket = _new_ticket(
-                    lines=last_generated.get("lines", []),
-                    strategy=last_generated.get("strategy", "Balanced Mix"),
-                )
-                saved_draw_iso = last_generated.get("draw_date") or ticket["draw_date"]
-                ticket["draw_date"] = saved_draw_iso
-                ticket["draw_label"] = last_generated.get("draw_label") or format_uk_date(saved_draw_iso)
-                st.session_state["tickets"].append(ticket)
-                _persist_tickets()
-                st.success("Ticket saved.")
+                generated_meta = st.session_state.get("last_generated_meta", {})
+                draw_date_iso = generated_meta.get("draw_date")
+                draw_label = generated_meta.get("draw_label")
+                if not draw_date_iso:
+                    st.warning("Select a draw date (Tue/Fri) to generate picks.")
+                else:
+                    ticket = _new_ticket(
+                        lines=last_generated.get("lines", []),
+                        strategy=last_generated.get("strategy", "Balanced Mix"),
+                        draw_date_iso=draw_date_iso,
+                        draw_label=draw_label or format_uk_date(draw_date_iso),
+                    )
+                    st.session_state["tickets"].append(ticket)
+                    _persist_tickets()
+                    st.toast("Ticket saved.")
+                    st.success("Ticket saved.")
 
     if generate:
         with st.spinner("Fetching latest draw history..."):
@@ -662,12 +691,22 @@ if st.session_state["page"] == "Picks":
                 "line_count": line_count,
             }
             if st.button("Save generated lines as ticket 🎟️", use_container_width=True, type="secondary"):
-                ticket = _new_ticket(lines=generated_lines, strategy=strategy)
-                ticket["draw_date"] = st.session_state["selected_draw_date"]
-                ticket["draw_label"] = st.session_state["selected_draw_label"]
-                st.session_state["tickets"].append(ticket)
-                _persist_tickets()
-                st.success("Ticket saved.")
+                generated_meta = st.session_state.get("last_generated_meta", {})
+                draw_date_iso = generated_meta.get("draw_date")
+                draw_label = generated_meta.get("draw_label")
+                if not draw_date_iso:
+                    st.warning("Select a draw date (Tue/Fri) to generate picks.")
+                else:
+                    ticket = _new_ticket(
+                        lines=generated_lines,
+                        strategy=strategy,
+                        draw_date_iso=draw_date_iso,
+                        draw_label=draw_label or format_uk_date(draw_date_iso),
+                    )
+                    st.session_state["tickets"].append(ticket)
+                    _persist_tickets()
+                    st.toast("Ticket saved.")
+                    st.success("Ticket saved.")
 
             st.markdown(
                 '<div class="disclaimer"><strong>Disclaimer:</strong> Lottery draws are random; this is for entertainment/variety.</div>',
