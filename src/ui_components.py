@@ -247,4 +247,5 @@ def app_styles() -> str:
     if not css_path.exists():
         return ""
 
-    return css_path.read_text(encoding="utf-8")
+    css = css_path.read_text(encoding="utf-8")
+    return f"<style>{css}</style>"
