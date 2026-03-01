@@ -1,6 +1,7 @@
 from collections import Counter
 from datetime import date, datetime, timezone
 from html import escape
+import importlib
 from typing import Callable
 import json
 import uuid
@@ -14,11 +15,19 @@ from src.date_utils import format_uk_date
 from src.draw_dates import format_uk_draw_label, is_draw_day, next_draw_date, upcoming_draw_dates
 from src.jackpot_service import get_live_jackpot
 from src.strategies import STRATEGIES, build_line, explain_line
-from src import ui_components
 from src.ticket_storage import load_tickets_from_localstorage, save_tickets_to_localstorage
+
+try:
+    ui_components = importlib.import_module("src.ui_components")
+except Exception as e:
+    ui_components = None
+    st.error(f"UI module failed to load: {e}")
 
 
 def _resolve_ui_function(*names: str) -> Callable | None:
+    if ui_components is None:
+        return None
+
     for name in names:
         function = getattr(ui_components, name, None)
         if callable(function):
@@ -468,7 +477,9 @@ def compute_insights(draws: list[dict], topn: int = 5):
 
 _ensure_ticket_state()
 # Load app CSS once at app startup so every page uses the same theme styles.
-st.markdown(f"<style>{app_styles()}</style>", unsafe_allow_html=True)
+styles = app_styles()
+if styles:
+    st.markdown(styles, unsafe_allow_html=True)
 st.markdown('<div class="wl-app">', unsafe_allow_html=True)
 if _render_app_header:
     st.markdown(_render_app_header(app_name="Wilkos LuckyLogic", tagline="Smarter EuroMillions picks"), unsafe_allow_html=True)
