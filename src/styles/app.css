@@ -32,6 +32,36 @@ html, body, [class*="css"] {
   color: var(--text);
 }
 
+
+.stApp [data-testid="stVerticalBlock"],
+.stApp [data-testid="stHorizontalBlock"],
+.stApp [data-testid="stColumn"],
+.stApp [data-testid="stMarkdownContainer"],
+.stApp [data-testid="stMetric"],
+.stApp [data-testid="stExpander"],
+.stApp [data-testid="stContainer"],
+.stApp [data-testid="stForm"],
+.stApp [data-testid="stToolbar"] {
+  background: transparent !important;
+}
+
+.stApp [data-baseweb="card"],
+.stApp [data-baseweb="popover"],
+.stApp [data-baseweb="menu"],
+.stApp [data-baseweb="select"],
+.stApp [data-baseweb="button"] {
+  background-color: transparent !important;
+}
+
+.stApp .element-container,
+.stApp .stMarkdown,
+.stApp .stMarkdown > div {
+  background: transparent !important;
+}
+
+.stApp [data-testid="stContainer"] {
+  background: rgba(11, 27, 43, 0) !important;
+}
 .block-container {
   padding-top: 0.55rem;
   padding-bottom: 1rem;
