@@ -1,6 +1,7 @@
 from collections import Counter
 from datetime import date, datetime, timezone
 from html import escape
+from pathlib import Path
 import importlib
 from typing import Callable
 import json
@@ -100,6 +101,13 @@ def render_number_balls(
 
 st.set_page_config(page_title="Wilkos LuckyLogic", layout="wide")
 
+def inject_css() -> None:
+    css_path = Path(__file__).parent / "src" / "styles" / "app.css"
+    if css_path.exists():
+        css = css_path.read_text(encoding="utf-8")
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    else:
+        st.warning(f"CSS file not found: {css_path}")
 
 @st.cache_data(ttl=60 * 60)
 def fetch_draws():
@@ -476,10 +484,9 @@ def compute_insights(draws: list[dict], topn: int = 5):
 
 
 _ensure_ticket_state()
-# Load app CSS once at app startup so every page uses the same theme styles.
-styles = app_styles()
-if styles:
-    st.markdown(styles, unsafe_allow_html=True)
+
+# Load CSS directly from src/styles/app.css (do not depend on ui_components import)
+inject_css()
 st.markdown('<div class="wl-app">', unsafe_allow_html=True)
 if _render_app_header:
     st.markdown(_render_app_header(app_name="Wilkos LuckyLogic", tagline="Smarter EuroMillions picks"), unsafe_allow_html=True)
