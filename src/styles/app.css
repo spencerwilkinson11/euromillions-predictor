@@ -383,6 +383,27 @@ div[role="radiogroup"] label:focus-within {
 div[data-testid="stButton"],
 div[data-testid="stDownloadButton"] { background: transparent !important; }
 
+/* --- FIX: Streamlit/BaseWeb wrapper backgrounds (white boxes) --- */
+div[data-testid="stButton"] > div,
+div[data-testid="stDownloadButton"] > div,
+div[data-testid="stButton"] div,
+div[data-testid="stDownloadButton"] div {
+  background: transparent !important;
+}
+
+/* Make sure the button fills the widget area (prevents white “bar” showing through) */
+.stButton > button,
+.stDownloadButton > button {
+  width: 100% !important;
+}
+
+/* BaseWeb sometimes injects spans/divs that override text/background */
+.stButton > button *,
+.stDownloadButton > button * {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
 .stButton > button,
 .stDownloadButton > button,
 button[kind="primary"],
