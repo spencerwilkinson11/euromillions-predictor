@@ -3,8 +3,6 @@ from __future__ import annotations
 from src.date_utils import format_uk_date
 from html import escape
 
-import streamlit as st
-
 
 def _first_available(draw: dict, keys: tuple[str, ...]) -> object | None:
     for key in keys:
@@ -142,11 +140,8 @@ def render_app_header(app_name: str = "Wilkos LuckyLogic", tagline: str = "Smart
     """
 
 
-def render_balls(main_nums: list[int], stars: list[int]) -> None:
-    st.markdown(
-        render_number_balls(main_nums, stars),
-        unsafe_allow_html=True,
-    )
+def render_balls(main_nums: list[int], stars: list[int]) -> str:
+    return render_number_balls(main_nums, stars)
 
 
 def render_number_balls(
@@ -182,15 +177,14 @@ def render_number_balls(
     )
 
 
-def render_insight_card(title: str, body: str, icon: str = "") -> None:
-    st.markdown(
+def render_insight_card(title: str, body: str, icon: str = "") -> str:
+    return (
         f"""
         <div class="insight-card">
             <div class="insight-title"><span class="insight-icon">{icon}</span>{title}</div>
             <div class="insight-body">{body}</div>
         </div>
-        """,
-        unsafe_allow_html=True,
+        """
     )
 
 
