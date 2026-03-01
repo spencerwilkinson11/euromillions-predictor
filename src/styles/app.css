@@ -409,6 +409,21 @@ div[data-testid="stDownloadButton"] div {
   background: transparent !important;
 }
 
+/* BaseWeb surfaces can still paint white behind widgets */
+[data-baseweb="base-input"],
+[data-baseweb="popover"],
+[data-baseweb="select"],
+[data-baseweb="menu"] {
+  background: transparent !important;
+}
+
+/* Download button sometimes uses an <a> wrapper in some Streamlit builds */
+div[data-testid="stDownloadButton"] a,
+div[data-testid="stDownloadButton"] a:hover {
+  background: transparent !important;
+  color: var(--text) !important;
+}
+
 .stButton > button,
 .stDownloadButton > button,
 button[kind="primary"],
