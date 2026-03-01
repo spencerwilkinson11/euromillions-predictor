@@ -4,7 +4,6 @@ from html import escape
 import importlib
 from typing import Callable
 import json
-import uuid
 
 import pandas as pd
 import requests
@@ -12,11 +11,21 @@ import streamlit as st
 
 from src.core.analytics import frequency_counter, overdue_gaps, recent_draw_summary, top_n
 from src.core.date_utils import format_uk_date
+from src.core.draws import draw_date_text, draw_to_payload, parse_optional_jackpot, prepare_draws
 from src.core.draw_dates import format_uk_draw_label, is_draw_day, next_draw_date, upcoming_draw_dates
-from src.jackpot_service import get_live_jackpot
+from src.core.ports import DrawsProvider, JackpotProvider, TicketStore
 from src.core.strategies import STRATEGIES, build_line, explain_line
-from src.services.draws_provider import fetch_draws as fetch_draws_service
-from src.services.ticket_store import load_tickets_from_localstorage, save_tickets_to_localstorage
+from src.core.tickets import (
+    as_iso_date,
+    new_ticket,
+    prepare_ticket_match_rows,
+    safe_ticket_lines,
+    ticket_from_dict,
+    ticket_to_dict,
+)
+from src.services.draws_provider_http import HttpDrawsProvider
+from src.services.jackpot_provider import LiveJackpotProvider
+from src.services.ticket_store_localstorage import LocalStorageTicketStore
 from src.ui_streamlit.css import inject_css
 
 try:
@@ -66,7 +75,9 @@ def render_result_card(line_index: int, main_nums: list[int], stars: list[int], 
 
 def render_insight_card(title: str, body: str, icon: str = "") -> None:
     if _render_insight_card:
-        _render_insight_card(title, body, icon)
+        rendered = _render_insight_card(title, body, icon)
+        if isinstance(rendered, str) and rendered.strip():
+            st.markdown(rendered, unsafe_allow_html=True)
         return
 
     st.markdown(f"**{icon} {title}**")
@@ -95,176 +106,34 @@ def render_number_balls(
 
 st.set_page_config(page_title="Wilkos LuckyLogic", layout="wide")
 
+draws_provider: DrawsProvider = HttpDrawsProvider()
+jackpot_provider: JackpotProvider = LiveJackpotProvider()
+ticket_store: TicketStore = LocalStorageTicketStore()
+
 @st.cache_data(ttl=30 * 60)
 def cached_jackpot():
-    return get_live_jackpot()
+    return jackpot_provider.get_jackpot()
 
 
 def _fallback_jackpot_from_draw(draw: dict | None) -> int | None:
     if not draw:
         return None
-
-    for key in ("estimatedJackpot", "jackpot", "jackpotAmount", "topPrize", "jackpot_amount"):
-        raw = draw.get(key)
-        if raw in (None, ""):
-            continue
-        cleaned = "".join(ch for ch in str(raw) if ch.isdigit())
-        if cleaned:
-            return int(cleaned)
-
-    return None
+    return parse_optional_jackpot(draw)
 
 
-def normalize_draws(draws: list[dict] | None) -> list[dict]:
-    """Normalize draw payload values to stable integer lists for numbers/stars."""
-
-    def _safe_int_list(values: list | None) -> list[int]:
-        normalized_values: list[int] = []
-        for value in values or []:
-            if pd.isna(value):
-                continue
-            try:
-                normalized_values.append(int(value))
-            except (TypeError, ValueError):
-                continue
-        return normalized_values
-
-    normalized: list[dict] = []
-    for draw in draws or []:
-        normalized_draw = dict(draw)
-        normalized_draw["numbers"] = _safe_int_list(draw.get("numbers"))
-        normalized_draw["stars"] = _safe_int_list(draw.get("stars"))
-        normalized.append(normalized_draw)
-
-    return normalized
-
-
-def _parse_draw_timestamp(draw: dict) -> float:
-    """Parse draw date formats and return a sortable UTC timestamp."""
-    for key in ("date", "drawDate", "draw_date"):
-        value = draw.get(key)
-        if not value:
-            continue
-
-        text = str(value).strip()
-        parsed_dt: datetime | None = None
-
-        try:
-            parsed_dt = datetime.fromisoformat(text.replace("Z", "+00:00"))
-        except ValueError:
-            for pattern in ("%Y-%m-%d", "%d/%m/%Y"):
-                try:
-                    parsed_dt = datetime.strptime(text, pattern)
-                    break
-                except ValueError:
-                    continue
-
-        if parsed_dt is None:
-            continue
-
-        if parsed_dt.tzinfo is None:
-            parsed_dt = parsed_dt.replace(tzinfo=timezone.utc)
-        else:
-            parsed_dt = parsed_dt.astimezone(timezone.utc)
-
-        return parsed_dt.timestamp()
-
-    return float("-inf")
-
-
-def prepare_draws(draws: list[dict] | None, history_n: int) -> list[dict]:
-    """Normalize, sort newest-first by parsed date, and slice recent history."""
-    normalized = normalize_draws(draws)
-    ordered = sorted(normalized, key=_parse_draw_timestamp, reverse=True)
-    return ordered[:history_n]
-
-
-def _draw_date_text(draw: dict) -> str:
-    for key in ("date", "drawDate", "draw_date"):
-        value = draw.get(key)
-        if value not in (None, ""):
-            return str(value)
-    return ""
-
-
-def _as_iso_date(value: object) -> str | None:
-    if value in (None, ""):
-        return None
-
-    try:
-        if isinstance(value, datetime):
-            return value.date().isoformat()
-        if isinstance(value, date):
-            return value.isoformat()
-        return datetime.fromisoformat(str(value).strip().replace("Z", "+00:00")).date().isoformat()
-    except (TypeError, ValueError):
-        return None
-
-
-def _safe_ticket_lines(lines: list[dict] | None) -> list[dict]:
-    validated: list[dict] = []
-    for line in lines or []:
-        if not isinstance(line, dict):
-            continue
-
-        main_numbers = line.get("main", [])
-        stars = line.get("stars", [])
-
-        if not isinstance(main_numbers, list) or not isinstance(stars, list):
-            continue
-
-        try:
-            main_numbers = sorted(int(v) for v in main_numbers)
-            stars = sorted(int(v) for v in stars)
-        except (TypeError, ValueError):
-            continue
-
-        validated.append({"main": main_numbers, "stars": stars})
-
-    return validated
-
-
-def _new_ticket(lines: list[dict], strategy: str, draw_date_iso: str, draw_label: str) -> dict:
-    return {
-        "id": str(uuid.uuid4()),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "draw_date": draw_date_iso,
-        "draw_label": draw_label,
-        "strategy": strategy,
-        "lines": _safe_ticket_lines(lines),
-        "status": "Pending",
-        "notes": "",
-    }
-
-
-def _render_ticket_line_with_matches(
-    line: dict,
-    winning_mains: set[int],
-    winning_stars: set[int],
-    *,
-    should_check_matches: bool,
-    pending_label: str | None = None,
-) -> str:
-    mains = line.get("main", [])
-    stars = line.get("stars", [])
-
+def _render_ticket_match_row(row: dict) -> str:
     balls_markup = render_number_balls(
-        mains,
-        stars,
-        matched_mains=(set(mains) & winning_mains) if should_check_matches else set(),
-        matched_stars=(set(stars) & winning_stars) if should_check_matches else set(),
+        row["main"],
+        row["stars"],
+        matched_mains=row["matched_mains"],
+        matched_stars=row["matched_stars"],
     )
-
-    matches = (
-        sum(1 for value in mains if value in winning_mains) + sum(1 for value in stars if value in winning_stars)
-        if should_check_matches
-        else "—"
-    )
+    pending_label = row.get("pending_label")
     pending_markup = f'<div class="ticket-pending-label">{escape(pending_label)}</div>' if pending_label else ""
     return (
         '<div class="ticket-match-line">'
         f'<div class="ticket-line-balls">{balls_markup}</div>'
-        f'<div class="ticket-line-meta"><div class="wl-match-badge">{matches}</div>{pending_markup}</div>'
+        f'<div class="ticket-line-meta"><div class="wl-match-badge">{row["matches"]}</div>{pending_markup}</div>'
         '</div>'
     )
 
@@ -277,41 +146,31 @@ def render_your_tickets_section(most_recent_draw: dict | None) -> None:
         return
 
     recent_tickets = list(reversed(tickets[-3:]))
-    last_result_date_iso = _as_iso_date(_draw_date_text(most_recent_draw or {}))
+    last_result_date_iso = as_iso_date(draw_date_text(most_recent_draw or {}))
 
     for ticket in recent_tickets:
         created_at = format_uk_date(ticket.get("created_at"))
         strategy = escape(str(ticket.get("strategy", "Unknown strategy")))
-        draw_date_iso = _as_iso_date(ticket.get("draw_date"))
+        draw_date_iso = as_iso_date(ticket.get("draw_date"))
         draw_label = ticket.get("draw_label") or format_uk_date(draw_date_iso)
-        lines = _safe_ticket_lines(ticket.get("lines", []))[:5]
-        draw_matches_latest = bool(last_result_date_iso and draw_date_iso == last_result_date_iso)
+        ticket_model = ticket_from_dict(ticket)
+        if ticket_model is None:
+            continue
 
-        winning_mains = (
-            set(int(value) for value in (most_recent_draw or {}).get("numbers", []) if isinstance(value, int))
-            if draw_matches_latest
-            else set()
-        )
-        winning_stars = (
-            set(int(value) for value in (most_recent_draw or {}).get("stars", []) if isinstance(value, int))
-            if draw_matches_latest
-            else set()
-        )
+        draw_matches_latest = bool(last_result_date_iso and draw_date_iso == last_result_date_iso)
+        winning_mains = set(int(value) for value in (most_recent_draw or {}).get("numbers", []) if isinstance(value, int)) if draw_matches_latest else set()
+        winning_stars = set(int(value) for value in (most_recent_draw or {}).get("stars", []) if isinstance(value, int)) if draw_matches_latest else set()
 
         st.markdown(f"**{strategy}** · {draw_label} · Created {created_at}")
         pending_label = None if draw_matches_latest else f"Pending (Draw: {draw_label})"
-        lines_markup = "".join(
-            [
-                _render_ticket_line_with_matches(
-                    line,
-                    winning_mains=winning_mains,
-                    winning_stars=winning_stars,
-                    should_check_matches=draw_matches_latest,
-                    pending_label=pending_label,
-                )
-                for line in lines
-            ]
+        rows = prepare_ticket_match_rows(
+            ticket_model,
+            winning_mains=winning_mains,
+            winning_stars=winning_stars,
+            should_check_matches=draw_matches_latest,
+            pending_label=pending_label,
         )
+        lines_markup = "".join([_render_ticket_match_row(row) for row in rows])
         st.markdown(f'<div class="ticket-match-list">{lines_markup}</div>', unsafe_allow_html=True)
 
     if st.button("View all in Tickets"):
@@ -320,8 +179,8 @@ def render_your_tickets_section(most_recent_draw: dict | None) -> None:
 
 def _ensure_ticket_state() -> None:
     if "tickets" not in st.session_state:
-        loaded_tickets = load_tickets_from_localstorage()
-        st.session_state["tickets"] = loaded_tickets if isinstance(loaded_tickets, list) else []
+        loaded_tickets = ticket_store.load()
+        st.session_state["tickets"] = [ticket_to_dict(ticket) for ticket in loaded_tickets]
 
     if "last_generated_lines" not in st.session_state:
         st.session_state["last_generated_lines"] = None
@@ -334,7 +193,12 @@ def _ensure_ticket_state() -> None:
 
 
 def _persist_tickets() -> None:
-    save_tickets_to_localstorage(st.session_state.get("tickets", []))
+    tickets = []
+    for payload in st.session_state.get("tickets", []):
+        ticket = ticket_from_dict(payload)
+        if ticket is not None:
+            tickets.append(ticket)
+    ticket_store.save(tickets)
 
 
 def _navigate_to(page_name: str) -> None:
@@ -472,7 +336,7 @@ else:
     st.caption("Smarter EuroMillions picks")
 
 try:
-    all_draws = fetch_draws_service()
+    all_draws = [draw_to_payload(draw) for draw in draws_provider.fetch_draws()]
 except requests.RequestException:
     all_draws = []
 
@@ -491,7 +355,7 @@ jackpot_html = ui_components.render_jackpot_card(
     next_draw_day=None,
 )
 
-draw_seed_iso = _as_iso_date(meta.next_draw_date if meta.ok else None)
+draw_seed_iso = as_iso_date(meta.next_draw_date if meta.ok else None)
 draw_seed = date.fromisoformat(draw_seed_iso) if draw_seed_iso else next_draw_date(datetime.now(timezone.utc).date())
 draw_dates = upcoming_draw_dates(draw_seed, weeks=12)
 draw_options = [{"label": format_uk_draw_label(d), "value": d.isoformat()} for d in draw_dates]
@@ -518,7 +382,7 @@ st.markdown(
 
 draws_df = pd.DataFrame(ordered_draws)
 if not draws_df.empty:
-    draws_df["draw_date"] = draws_df.apply(_draw_date_text, axis=1)
+    draws_df["draw_date"] = draws_df.apply(draw_date_text, axis=1)
 draws_df = draws_df.reset_index(drop=True)
 
 pages = ["Picks", "Insights", "Tickets"]
@@ -599,13 +463,13 @@ if st.session_state["page"] == "Picks":
                 if not draw_date_iso:
                     st.warning("Select a draw date (Tue/Fri) to generate picks.")
                 else:
-                    ticket = _new_ticket(
+                    ticket = new_ticket(
                         lines=last_generated.get("lines", []),
                         strategy=last_generated.get("strategy", "Balanced Mix"),
                         draw_date_iso=draw_date_iso,
                         draw_label=draw_label or format_uk_date(draw_date_iso),
                     )
-                    st.session_state["tickets"].append(ticket)
+                    st.session_state["tickets"].append(ticket_to_dict(ticket))
                     _persist_tickets()
                     st.toast("Ticket saved.")
                     st.success("Ticket saved.")
@@ -614,7 +478,7 @@ if st.session_state["page"] == "Picks":
         with st.spinner("Fetching latest draw history..."):
             if not all_draws:
                 try:
-                    all_draws = fetch_draws_service()
+                    all_draws = [draw_to_payload(draw) for draw in draws_provider.fetch_draws()]
                 except requests.RequestException as exc:
                     st.error("Could not fetch draw data right now. Please try again in a moment.")
                     st.caption(f"Technical details: {exc}")
@@ -692,13 +556,13 @@ if st.session_state["page"] == "Picks":
                 if not draw_date_iso:
                     st.warning("Select a draw date (Tue/Fri) to generate picks.")
                 else:
-                    ticket = _new_ticket(
+                    ticket = new_ticket(
                         lines=generated_lines,
                         strategy=strategy,
                         draw_date_iso=draw_date_iso,
                         draw_label=draw_label or format_uk_date(draw_date_iso),
                     )
-                    st.session_state["tickets"].append(ticket)
+                    st.session_state["tickets"].append(ticket_to_dict(ticket))
                     _persist_tickets()
                     st.toast("Ticket saved.")
                     st.success("Ticket saved.")
@@ -746,10 +610,10 @@ else:
             with st.expander(f"Ticket {index} • {ticket.get('strategy', 'Unknown strategy')} • {ticket_draw_label}"):
                 st.caption(f"Created: {created_at}")
                 st.write(f"Status: {ticket.get('status', 'Pending')}")
-                lines = _safe_ticket_lines(ticket.get("lines", []))
+                lines = safe_ticket_lines(ticket.get("lines", []))
                 for line_idx, line in enumerate(lines, start=1):
                     st.markdown(f"**Line {line_idx}**")
-                    st.markdown(render_number_balls(line["main"], line["stars"]), unsafe_allow_html=True)
+                    st.markdown(render_number_balls(line.main, line.stars), unsafe_allow_html=True)
 
                 delete_key = f"delete_ticket_{ticket.get('id', index)}"
                 if st.button("Delete ticket", key=delete_key):
