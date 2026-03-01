@@ -404,6 +404,11 @@ div[data-testid="stDownloadButton"] div {
   color: var(--text) !important;
 }
 
+/* Extra safety: BaseWeb button wrapper can paint white */
+[data-baseweb="button"] {
+  background: transparent !important;
+}
+
 .stButton > button,
 .stDownloadButton > button,
 button[kind="primary"],
